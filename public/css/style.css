@@ -1,0 +1,179 @@
+/* ============================================================
+   UATM GASA FORMATION — Feuille de style globale
+   Importer ce fichier dans TOUS les views sans exception
+   ============================================================ */
+
+/* --- Variables couleurs (changer ici = change partout) --- */
+:root {
+  --primary:       #1A3C6E;   /* Bleu marine UATM — boutons, navbar */
+  --primary-light: #2A5BA8;   /* Hover boutons */
+  --secondary:     #F5A623;   /* Orange accent — badges, highlights */
+  --success:       #28A745;
+  --danger:        #DC3545;
+  --warning:       #FFC107;
+  --info:          #17A2B8;
+
+  --bg-page:       #F4F6F9;   /* Fond général */
+  --bg-card:       #FFFFFF;   /* Fond des cartes */
+  --text-main:     #212529;
+  --text-muted:    #6C757D;
+  --border:        #DEE2E6;
+
+  --font-main:     'Segoe UI', sans-serif;
+  --radius:        8px;
+  --shadow:        0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* --- Reset & base --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-main);
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* --- Navbar --- */
+.navbar-uatm {
+  background: var(--primary) !important;
+}
+.navbar-uatm .navbar-brand,
+.navbar-uatm .nav-link {
+  color: #fff !important;
+}
+.navbar-uatm .nav-link:hover {
+  color: var(--secondary) !important;
+}
+
+/* --- Sidebar (pour les dashboards) --- */
+.sidebar {
+  background: var(--primary);
+  min-height: 100vh;
+  padding-top: 1rem;
+}
+.sidebar .nav-link {
+  color: rgba(255,255,255,0.8);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  margin: 2px 8px;
+  transition: all 0.2s;
+}
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  background: var(--primary-light);
+  color: #fff;
+}
+.sidebar .nav-link i {
+  width: 20px;
+  margin-right: 8px;
+}
+
+/* --- Cartes --- */
+.card {
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: var(--bg-card);
+}
+.card-header-uatm {
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius) var(--radius) 0 0 !important;
+  padding: 14px 20px;
+  font-weight: 600;
+}
+
+/* --- Boutons --- */
+.btn-uatm {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 20px;
+  transition: background 0.2s;
+}
+.btn-uatm:hover {
+  background: var(--primary-light);
+  color: #fff;
+}
+.btn-accent {
+  background: var(--secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+}
+
+/* --- Badges statut mémoire --- */
+.badge-en_attente     { background: var(--warning);  color: #212529; }
+.badge-en_verification{ background: var(--info);     color: #fff; }
+.badge-valide         { background: var(--success);  color: #fff; }
+.badge-rejete         { background: var(--danger);   color: #fff; }
+.badge-publie         { background: var(--primary);  color: #fff; }
+.badge-non_public     { background: var(--text-muted); color: #fff; }
+
+/* --- Tables --- */
+.table-uatm thead {
+  background: var(--primary);
+  color: #fff;
+}
+.table-uatm tbody tr:hover {
+  background: #EEF2F8;
+}
+
+/* --- Formulaires --- */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.2rem rgba(26,60,110,0.15);
+}
+label { font-weight: 500; color: var(--text-main); }
+
+/* --- Page login --- */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+}
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  padding: 40px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+/* --- Alertes --- */
+.alert { border-radius: var(--radius); border: none; }
+
+/* --- Visionneur PDF --- */
+#pdf-container {
+  width: 100%;
+  height: 80vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #525659;
+}
+#pdf-canvas { display: block; margin: 0 auto; }
+
+/* --- Utilitaires --- */
+.text-primary-uatm { color: var(--primary) !important; }
+.bg-primary-uatm   { background: var(--primary) !important; color: #fff; }
+.section-title {
+  color: var(--primary);
+  font-weight: 700;
+  border-left: 4px solid var(--secondary);
+  padding-left: 12px;
+  margin-bottom: 20px;
+}

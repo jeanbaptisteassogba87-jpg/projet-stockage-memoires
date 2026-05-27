@@ -1,0 +1,2 @@
+# Bloquer tout accès direct aux fichiers uploadés
+Deny from all
