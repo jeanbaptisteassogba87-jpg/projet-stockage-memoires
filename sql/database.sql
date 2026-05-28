@@ -1,17 +1,9 @@
--- ============================================================
--- GESTION DES MEMOIRES - UATM GASA FORMATION
--- Script de création de la base de données
--- ============================================================
+
 
 CREATE DATABASE IF NOT EXISTS gestion_memoires
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-USE gestion_memoires;
-
--- ------------------------------------------------------------
--- TABLE : centre
--- ------------------------------------------------------------
 CREATE TABLE centre (
     id_centre           INT AUTO_INCREMENT PRIMARY KEY,
     nom_centre          VARCHAR(100) NOT NULL,
@@ -21,9 +13,7 @@ CREATE TABLE centre (
     created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : filiere
--- ------------------------------------------------------------
+
 CREATE TABLE filiere (
     id_filiere  INT AUTO_INCREMENT PRIMARY KEY,
     nom_filiere VARCHAR(100) NOT NULL,
@@ -32,9 +22,6 @@ CREATE TABLE filiere (
     FOREIGN KEY (centre_id) REFERENCES centre(id_centre) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : utilisateur (table mère)
--- ------------------------------------------------------------
 CREATE TABLE utilisateur (
     id_utilisateur    INT AUTO_INCREMENT PRIMARY KEY,
     nom               VARCHAR(100) NOT NULL,
@@ -48,9 +35,7 @@ CREATE TABLE utilisateur (
     FOREIGN KEY (centre_id) REFERENCES centre(id_centre)
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : etudiant (hérite de utilisateur)
--- ------------------------------------------------------------
+
 CREATE TABLE etudiant (
     utilisateur_id       INT PRIMARY KEY,
     numero_etudiant      VARCHAR(50) NOT NULL UNIQUE,
@@ -61,9 +46,7 @@ CREATE TABLE etudiant (
     FOREIGN KEY (filiere_id)     REFERENCES filiere(id_filiere)
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : professeur (hérite de utilisateur)
--- ------------------------------------------------------------
+
 CREATE TABLE professeur (
     utilisateur_id INT PRIMARY KEY,
     specialite     VARCHAR(100),
@@ -71,27 +54,19 @@ CREATE TABLE professeur (
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : directeur_etudes (hérite de utilisateur)
--- ------------------------------------------------------------
 CREATE TABLE directeur_etudes (
     utilisateur_id INT PRIMARY KEY,
     responsabilite VARCHAR(100),
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : technicien (hérite de utilisateur)
--- ------------------------------------------------------------
+
 CREATE TABLE technicien (
     utilisateur_id INT PRIMARY KEY,
     service        VARCHAR(100),
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : memoire
--- ------------------------------------------------------------
 CREATE TABLE memoire (
     id_memoire      INT AUTO_INCREMENT PRIMARY KEY,
     etudiant_id     INT NOT NULL,
@@ -111,9 +86,7 @@ CREATE TABLE memoire (
     UNIQUE KEY uq_etudiant_diplome (etudiant_id, type_diplome)
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : commentaire
--- ------------------------------------------------------------
+
 CREATE TABLE commentaire (
     id_commentaire  INT AUTO_INCREMENT PRIMARY KEY,
     memoire_id      INT NOT NULL,
@@ -124,9 +97,7 @@ CREATE TABLE commentaire (
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id_utilisateur) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- TABLE : like_memoire
--- ------------------------------------------------------------
+
 CREATE TABLE like_memoire (
     id_like         INT AUTO_INCREMENT PRIMARY KEY,
     memoire_id      INT NOT NULL,
