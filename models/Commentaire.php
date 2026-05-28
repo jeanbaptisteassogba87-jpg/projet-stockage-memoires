@@ -5,6 +5,8 @@ class Commentaire
     private int $id_commentaire;
     private string $contenu;
     private string $date_creation;
+    private int $memoire_id;
+    private int $utilisateur_id;
 
     // Getters
     public function getId(): int
@@ -22,6 +24,13 @@ class Commentaire
         return $this->date_creation;
     }
 
+    public function getMemoireId(): int { 
+        return $this->memoire_id; 
+        }
+    public function getUtilisateurId(): int {
+         return $this->utilisateur_id; 
+    }
+
     // Setters
     public function setContenu(string $contenu): void
     {
@@ -31,6 +40,12 @@ class Commentaire
     public function setDateCreation(string $date): void
     {
         $this->date_creation = $date;
+    }
+    public function setMemoireId(int $id): void {
+         $this->memoire_id = $id; 
+     }
+    public function setUtilisateurId(int $id): void {
+         $this->utilisateur_id = $id;
     }
 
     // Méthodes métier

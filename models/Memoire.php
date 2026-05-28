@@ -11,6 +11,8 @@ class Memoire
     private int $annee_soutenance;
     private string $date_depot;
     private string $remarques;
+    private int $etudiant_id;
+    private int $professeur_id;
 
     // Getters
     public function getId(): int
@@ -58,6 +60,14 @@ class Memoire
         return $this->remarques;
     }
 
+    public function getEtudiantId(): int { 
+        return $this->etudiant_id; 
+    }
+    public function getProfesseurId(): int { 
+        return $this->professeur_id; 
+    }
+
+
     // Setters
     public function setTitre(string $titre): void
     {
@@ -97,6 +107,13 @@ class Memoire
     public function setRemarques(string $remarques): void
     {
         $this->remarques = $remarques;
+    }
+
+    public function setEtudiantId(int $id): void { 
+        $this->etudiant_id = $id; 
+    }
+    public function setProfesseurId(int $id): void {
+         $this->professeur_id = $id; 
     }
 
     // Méthodes métier
