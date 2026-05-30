@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../dao/MemoireDAO.php';
+require_once __DIR__ . '/../dao/EtudiantDAO.php';
 require_once __DIR__ . '/../models/Memoire.php';
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/constants.php';
@@ -8,9 +9,11 @@ require_once __DIR__ . '/../config/constants.php';
 class EtudiantController {
     
     private MemoireDAO $memoireDAO;
+    private EtudiantDAO $etudiantDAO;
 
     public function __construct() {
         $this->memoireDAO = new MemoireDAO();
+        $this->etudiantDAO = new EtudiantDAO();
     }
 
     /**
@@ -21,6 +24,14 @@ class EtudiantController {
         requireRole(ROLE_ETUDIANT);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /views/etudiant/deposer_memoire.php');
+            exit;
+        }
+
+        if (!$this->etudiantDAO->peutDeposer((int)$_SESSION['user_id'])) {
+            $_SESSION['upload_errors'] = [
+                'Vous n\'etes pas autorise a deposer un memoire. Seuls les etudiants L3, M2 ou diplomes permanents peuvent le faire.'
+            ];
             header('Location: /views/etudiant/deposer_memoire.php');
             exit;
         }
