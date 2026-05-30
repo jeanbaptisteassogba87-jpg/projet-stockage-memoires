@@ -2,6 +2,7 @@
 $pageTitle = 'Déposer un mémoire — Étudiant';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../dao/EtudiantDAO.php';
 requireRole(ROLE_ETUDIANT);
 
 // Si premier connexion, forcer changement mdp
@@ -16,6 +17,9 @@ $formData = $_SESSION['form_data'] ?? [];
 // Nettoyer la session
 unset($_SESSION['upload_errors']);
 unset($_SESSION['form_data']);
+
+$etudiantDAO = new EtudiantDAO();
+$peutDeposer = $etudiantDAO->peutDeposer((int)$_SESSION['user_id']);
 ?>
 
 <?php require_once __DIR__ . '/../layout/header.php'; ?>
@@ -63,6 +67,13 @@ unset($_SESSION['form_data']);
       <?php endif; ?>
 
       <!-- Formulaire de dépôt -->
+      <?php if (!$peutDeposer): ?>
+        <div class="alert alert-warning" role="alert">
+          <i class="bi bi-exclamation-triangle"></i>
+          Vous ne pouvez pas deposer de memoire avec votre niveau actuel. Seuls les etudiants L3, M2 ou diplomes permanents sont autorises.
+        </div>
+      <?php else: ?>
+
       <div class="card p-4 mb-4">
         <form id="form-depot" method="POST" action="/controllers/EtudiantController.php" enctype="multipart/form-data" novalidate>
           
@@ -164,6 +175,8 @@ unset($_SESSION['form_data']);
         </form>
       </div>
 
+      <?php endif; ?>
+
       <!-- Informations utiles -->
       <div class="card bg-light border-0 p-4">
         <h5 class="card-title mb-3">
@@ -191,6 +204,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Aperçu du fichier sélectionné
   const fileInput = document.getElementById('fichier_pdf');
   const filePreview = document.getElementById('file-preview');
+
+  if (!fileInput || !filePreview) {
+    return;
+  }
 
   fileInput.addEventListener('change', function() {
     filePreview.innerHTML = '';
