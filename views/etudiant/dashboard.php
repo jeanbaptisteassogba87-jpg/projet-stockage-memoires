@@ -1,6 +1,7 @@
 <?php
 $pageTitle = 'Mon espace — Étudiant';
 require_once __DIR__ . '/../../config/session.php';
+require_once __DIR__ . '/../../config/constants.php';
 requireRole(ROLE_ETUDIANT);
 // Si premier connexion, forcer changement mdp
 if ($_SESSION['doit_changer_mdp']) {

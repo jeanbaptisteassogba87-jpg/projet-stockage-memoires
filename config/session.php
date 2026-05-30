@@ -9,7 +9,7 @@ function requireAuth(): void {
 
     if (empty($_SESSION['user_id'])) {
 
-        header('Location: /projet-stockage-memoires/views/auth/login.php');
+        header('Location: /views/auth/login.php');
 
         exit;
     }
@@ -22,7 +22,7 @@ function requireRole(string $role): void {
 
     if ($_SESSION['user_role'] !== $role) {
 
-        header('Location: /projet-stockage-memoires/index.php?error=acces_refuse');
+        header('Location: /index.php?error=acces_refuse');
 
         exit;
     }
@@ -35,7 +35,7 @@ function requireRoles(array $roles): void {
 
     if (!in_array($_SESSION['user_role'], $roles)) {
 
-        header('Location: /projet-stockage-memoires/index.php?error=acces_refuse');
+        header('Location: /index.php?error=acces_refuse');
 
         exit;
     }
@@ -65,7 +65,7 @@ function logoutUser(): void {
 
     session_destroy();
 
-    header('Location: /projet-stockage-memoires/views/auth/login.php');
+    header('Location: /views/auth/login.php');
 
     exit;
 }
