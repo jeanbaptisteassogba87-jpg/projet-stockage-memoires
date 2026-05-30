@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // mot de passe incorrect
         if (!password_verify($motDePasse, $user['mot_de_passe'])) {
 
-    header('Location: /projet-stockage-memoires/views/auth/login.php?error=identifiants');
+    header('Location: ../views/auth/login.php?error=identifiants');
 
     exit;
 }

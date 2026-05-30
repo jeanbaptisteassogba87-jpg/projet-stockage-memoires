@@ -3,7 +3,7 @@ class Database {
     private $host = "localhost";
     private $dbname = "gestion_memoires";
     private $username = "root";
-    private $password = "";
+    private $password = "#ASSOGBAjb94#";
 
     public function connect() {
         try {

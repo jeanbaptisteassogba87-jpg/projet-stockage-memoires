@@ -40,7 +40,7 @@ php -S localhost:8000
 | Technicien  | tech@uatm.bj        |
 | Directeur   | directeur@uatm.bj   |
 | Professeur  | prof@uatm.bj        |
-| Étudiant L3 | etud@uatm.bj        |
+| Étudiant L3 |             |
 
 ## Lancer les tests
 ```bash
