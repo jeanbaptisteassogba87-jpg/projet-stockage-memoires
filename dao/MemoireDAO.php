@@ -69,4 +69,33 @@ class MemoireDAO {
         $stmt->execute([':id' => $etudiantId]);
         return $stmt->fetchAll();
     }
+
+    // Vérifier si un étudiant a déjà un mémoire du même type
+    public function existeMemoireParTypeDiplome(int $etudiantId, string $typeDiplome): bool {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) as count FROM memoire 
+             WHERE etudiant_id = :etudiant_id AND type_diplome = :type_diplome"
+        );
+        $stmt->execute([
+            ':etudiant_id' => $etudiantId,
+            ':type_diplome' => $typeDiplome
+        ]);
+        $result = $stmt->fetch();
+        return ($result['count'] ?? 0) > 0;
+    }
+
+    // Trouver le mémoire d'un étudiant par type de diplôme
+    public function trouverParEtudiantEtType(int $etudiantId, string $typeDiplome): ?array {
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM memoire 
+             WHERE etudiant_id = :etudiant_id AND type_diplome = :type_diplome 
+             LIMIT 1"
+        );
+        $stmt->execute([
+            ':etudiant_id' => $etudiantId,
+            ':type_diplome' => $typeDiplome
+        ]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
 }
