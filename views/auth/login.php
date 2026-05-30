@@ -3,7 +3,7 @@ $pageTitle = 'Connexion — UATM GASA Formation';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/constants.php';
 
-// Si déjà connecté, rediriger
+
 if (!empty($_SESSION['user_id'])) {
     header('Location: /index.php'); exit;
 }
@@ -43,7 +43,7 @@ if (!empty($_SESSION['user_id'])) {
       </div>
     <?php endif; ?>
 
-    <form method="POST" action="/controllers/AuthController.php">
+    <form method="POST" action="../../controllers/AuthController.php">
       <input type="hidden" name="action" value="login">
 
       <div class="mb-3">
