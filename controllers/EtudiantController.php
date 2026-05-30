@@ -28,7 +28,9 @@ class EtudiantController {
             exit;
         }
 
-        if (!$this->etudiantDAO->peutDeposer((int)$_SESSION['user_id'])) {
+        $profilEtudiant = $this->etudiantDAO->trouverProfilParUtilisateurId((int)$_SESSION['user_id']);
+
+        if (!$profilEtudiant || !$this->etudiantDAO->peutDeposer((int)$_SESSION['user_id'])) {
             $_SESSION['upload_errors'] = [
                 'Vous n\'etes pas autorise a deposer un memoire. Seuls les etudiants L3, M2 ou diplomes permanents peuvent le faire.'
             ];
@@ -55,6 +57,18 @@ class EtudiantController {
 
         if (!in_array($typeDiplome, [DIPLOME_LICENCE, DIPLOME_MASTER])) {
             $erreurs[] = 'Type de diplôme invalide';
+        }
+
+        if (!empty($typeDiplome) && !(bool)$profilEtudiant['est_diplome_permanent']) {
+            $niveauEtude = $profilEtudiant['niveau_etude'];
+
+            if ($niveauEtude === 'L3' && $typeDiplome !== DIPLOME_LICENCE) {
+                $erreurs[] = 'Un etudiant L3 ne peut deposer qu\'un memoire de Licence';
+            }
+
+            if ($niveauEtude === 'M2' && $typeDiplome !== DIPLOME_MASTER) {
+                $erreurs[] = 'Un etudiant M2 ne peut deposer qu\'un memoire de Master';
+            }
         }
 
         $anneeActuelle = (int)date('Y');
@@ -141,7 +155,7 @@ class EtudiantController {
                 unset($_SESSION['upload_errors']);
                 unset($_SESSION['form_data']);
                 
-                $_SESSION['success_message'] = 'Votre mémoire a été déposé avec succès. En attente de vérification.';
+                $_SESSION['success_message'] = 'Votre memoire a ete depose avec succes. En attente de verification.';
                 header('Location: /views/etudiant/dashboard.php');
                 exit;
             } else {
