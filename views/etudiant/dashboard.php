@@ -164,6 +164,14 @@ foreach ($memoires as $memoire) {
                       >
                         <i class="bi bi-eye"></i> Consulter
                       </a>
+                      <?php if ($memoire['statut'] === STATUT_REJETE): ?>
+                        <a
+                          class="btn btn-sm btn-outline-warning ms-1"
+                          href="/views/etudiant/modifier_memoire.php?id=<?= (int)$memoire['id_memoire'] ?>"
+                        >
+                          <i class="bi bi-pencil"></i> Corriger
+                        </a>
+                      <?php endif; ?>
                     </td>
                   </tr>
                 <?php endforeach; ?>
