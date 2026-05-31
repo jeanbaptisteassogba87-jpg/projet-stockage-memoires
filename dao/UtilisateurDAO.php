@@ -163,4 +163,20 @@ class UtilisateurDAO
 
         return $requete->fetchAll(PDO::FETCH_ASSOC);
     }
+     public function changerMotDePasse(int $id, string $nouveauHash): bool
+    {
+        $sql = "
+            UPDATE utilisateur
+            SET mot_de_passe     = :hash,
+                doit_changer_mdp = 0
+            WHERE id_utilisateur = :id
+        ";
+ 
+        $stmt = $this->pdo->prepare($sql);
+ 
+        return $stmt->execute([
+            ':hash' => $nouveauHash,
+            ':id'   => $id,
+        ]);
+    }
 }
