@@ -1,10 +1,6 @@
 <?php
-// ============================================================
-// views/auth/change_password.php
-// Affiché automatiquement quand doit_changer_mdp = 1
-// Rôle : forcer l'utilisateur à choisir son propre mot de passe
-//        avant d'accéder à son espace
-// ============================================================
+
+// Rôle : forcer l'utilisateur à choisir son propre mot de passe  avant d'accéder à son espace
 
 $pageTitle = 'Changer mon mot de passe — UATM GASA Formation';
 
