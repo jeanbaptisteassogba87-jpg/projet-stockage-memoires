@@ -179,4 +179,50 @@ class UtilisateurDAO
             ':id'   => $id,
         ]);
     }
+    
+
+    /**
+     * Retourne l'id du dernier utilisateur inséré
+     * Utilisé juste après creerUtilisateur() pour insérer
+     * la ligne correspondante dans la table etudiant
+     *
+     * @return int|null
+     */
+    public function getDernierId(): ?int
+    {
+        $id = $this->pdo->lastInsertId();
+        return $id ? (int) $id : null;
+    }
+
+    /**
+     * Insère une ligne dans la table etudiant
+     * Appelé après creerUtilisateur() quand le rôle = etudiant
+     *
+     * @param int    $utilisateurId
+     * @param string $numeroEtudiant
+     * @param string $niveauEtude    L1 | L2 | L3 | M1 | M2
+     * @param int    $filiereId
+     * @return bool
+     */
+    public function creerEtudiant(
+        int    $utilisateurId,
+        string $numeroEtudiant,
+        string $niveauEtude,
+        int    $filiereId
+    ): bool {
+        $sql = "
+            INSERT IGNORE INTO etudiant
+                (utilisateur_id, numero_etudiant, niveau_etude, filiere_id)
+            VALUES
+                (:utilisateur_id, :numero_etudiant, :niveau_etude, :filiere_id)
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':utilisateur_id'  => $utilisateurId,
+            ':numero_etudiant' => $numeroEtudiant,
+            ':niveau_etude'    => $niveauEtude,
+            ':filiere_id'      => $filiereId,
+        ]);
+    }
 }
