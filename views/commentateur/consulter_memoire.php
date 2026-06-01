@@ -1,438 +1,363 @@
 <?php
 
-require_once __DIR__ . '/../layout/header.php';
+// Rôle : page de consultation détaillée d'un mémoire publié
+//        - infos complètes du mémoire
+//        - visionneuse PDF intégrée
+//        - bouton like / unlike
+//        - section commentaires (ajouter + liste)
 
-$userId = $_SESSION['user_id'];   
+
+$pageTitle = 'Consulter un mémoire — UATM GASA Formation';
+
+require_once __DIR__ . '/../../config/session.php';
+require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../dao/MemoirePublicDAO.php';
+require_once __DIR__ . '/../../dao/CommentaireDAO.php';
+require_once __DIR__ . '/../../dao/LikeDAO.php';
+
+requireAuth();
+
+$id = (int) ($_GET['id'] ?? 0);
+if (!$id) {
+    header('Location: /views/commentateur/rechercher.php');
+    exit;
+}
+
+$dao          = new MemoirePublicDAO();
+$commentaireDAO = new CommentaireDAO();
+$likeDAO      = new LikeDAO();
+$userId       = (int) $_SESSION['user_id'];
+
+// Charger le mémoire — uniquement s'il est publié
+$memoire = $dao->trouverPublie($id);
+if (!$memoire) {
+    header('Location: /views/commentateur/rechercher.php?error=introuvable');
+    exit;
+}
+
+// Charger les commentaires et l'état du like
+$commentaires = $commentaireDAO->listerParMemoire($id);
+$aLike        = $likeDAO->aDejaLike($id, $userId);
+
+// Messages feedback
+$successMessages = [
+    'commentaire_ok' => 'Commentaire ajouté.',
+];
+$errorMessages = [
+    'commentaire_vide' => 'Le commentaire ne peut pas être vide.',
+    'trop_long'        => 'Le commentaire dépasse 2000 caractères.',
+    'acces_refuse'     => 'Accès refusé.',
+];
+$successMsg = !empty($_GET['success']) ? ($successMessages[$_GET['success']] ?? '') : '';
+$errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']]   ?? '') : '';
+
+$role = $_SESSION['user_role'];
 ?>
+<?php require_once __DIR__ . '/../layout/header.php'; ?>
+<?php require_once __DIR__ . '/../layout/navbar.php'; ?>
 
-<div class="container py-4">
+<div class="container-fluid">
+  <div class="row">
 
-    <!-- Fil d'Ariane -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="/views/commentateur/dashboard.php?action=recherche">
-                    <i class="bi bi-search me-1"></i>Recherche
-                </a>
-            </li>
-            <li class="breadcrumb-item active">Consultation du mémoire</li>
-        </ol>
-    </nav>
+    <!-- Sidebar dynamique selon le rôle -->
+    <div class="col-md-2 px-0 sidebar">
+      <nav class="nav flex-column pt-3">
 
-    <!-- Message flash -->
-    <?php if (!empty($messageFlash)): ?>
-        <div class="alert alert-<?= $messageFlash['type'] === 'succes' ? 'success' : 'danger' ?>
-                    alert-dismissible fade show" role="alert">
-            <i class="bi bi-<?= $messageFlash['type'] === 'succes'
-                ? 'check-circle' : 'exclamation-triangle' ?> me-2"></i>
-            <?= htmlspecialchars($messageFlash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
+        <?php if ($role === ROLE_ETUDIANT): ?>
+          <a class="nav-link" href="/views/etudiant/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+        <?php elseif ($role === ROLE_PROFESSEUR): ?>
+          <a class="nav-link" href="/views/professeur/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+        <?php elseif ($role === ROLE_DIRECTEUR): ?>
+          <a class="nav-link" href="/views/directeur/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+        <?php elseif ($role === ROLE_TECHNICIEN): ?>
+          <a class="nav-link" href="/views/technicien/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+        <?php endif; ?>
 
-    <div class="row g-4">
+        <a class="nav-link active" href="/views/commentateur/rechercher.php">
+          <i class="bi bi-search"></i> Consulter mémoires
+        </a>
 
-        
-        <div class="col-lg-8">
-
-            <!-- Fiche mémoire -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-primary text-white
-                            d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="mb-1"><?= htmlspecialchars($memoire['titre']) ?></h5>
-                        <small class="text-white-50">
-                            <i class="bi bi-tag me-1"></i>
-                            <?= htmlspecialchars($memoire['type_diplome'] ?? '') ?>
-                        </small>
-                    </div>
-                    <span class="badge bg-success mt-1">Public</span>
-                </div>
-
-                <div class="card-body">
-                    <div class="row g-3 mb-3">
-
-                        <div class="col-sm-6">
-                            <small class="text-muted text-uppercase fw-semibold"
-                                   style="font-size:.7rem;">Auteur</small>
-                            <p class="mb-0 fw-semibold">
-                                <i class="bi bi-person-circle me-1 text-primary"></i>
-                                <?= htmlspecialchars($memoire['auteur_nom']) ?>
-                            </p>
-                        </div>
-
-                        <div class="col-sm-3">
-                            <small class="text-muted text-uppercase fw-semibold"
-                                   style="font-size:.7rem;">Filière</small>
-                            <p class="mb-0 fw-semibold">
-                                <?= htmlspecialchars($memoire['filiere'] ?? '—') ?>
-                            </p>
-                        </div>
-
-                        <div class="col-sm-3">
-                            <small class="text-muted text-uppercase fw-semibold"
-                                   style="font-size:.7rem;">Niveau</small>
-                            <p class="mb-0">
-                                <span class="badge bg-secondary">
-                                    <?= htmlspecialchars($memoire['niveau'] ?? '') ?>
-                                </span>
-                            </p>
-                        </div>
-
-                        <div class="col-sm-3">
-                            <small class="text-muted text-uppercase fw-semibold"
-                                   style="font-size:.7rem;">Année de soutenance</small>
-                            <p class="mb-0 fw-semibold">
-                                <?= (int)($memoire['annee_soutenance'] ?? 0) ?>
-                            </p>
-                        </div>
-
-                        <div class="col-sm-3">
-                            <small class="text-muted text-uppercase fw-semibold"
-                                   style="font-size:.7rem;">Date de dépôt</small>
-                            <p class="mb-0 fw-semibold">
-                                <?= !empty($memoire['date_depot'])
-                                    ? date('d/m/Y', strtotime($memoire['date_depot']))
-                                    : '—' ?>
-                            </p>
-                        </div>
-
-                    </div>
-
-                    <?php if (!empty($memoire['theme'])): ?>
-                        <hr>
-                        <h6 class="fw-bold">Thème</h6>
-                        <p class="text-secondary mb-0">
-                            <?= nl2br(htmlspecialchars($memoire['theme'])) ?>
-                        </p>
-                    <?php endif; ?>
-
-                    <!-- LIKES  (LIKE::ajouter() / LIKE::retirer()) -->
-                    <hr>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="text-muted small">
-                            <i class="bi bi-heart-fill text-danger me-1"></i>
-                            <strong><?= $nbLikes ?></strong>
-                            like<?= $nbLikes > 1 ? 's' : '' ?>
-                        </span>
-
-                        <?php if ($utilisateurALike): ?>
-                            <form method="POST"
-                                  action="/views/commentateur/dashboard.php?action=unlikeMemoire">
-                                <input type="hidden" name="memoire_id"
-                                       value="<?= (int)$memoire['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    <i class="bi bi-heart-fill me-1"></i>Je n'aime plus
-                                </button>
-                            </form>
-                        <?php else: ?>
-                            <form method="POST"
-                                  action="/views/commentateur/dashboard.php?action=likerMemoire">
-                                <input type="hidden" name="memoire_id"
-                                       value="<?= (int)$memoire['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-heart me-1"></i>J'aime
-                                </button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- VISIONNEUSE PDF SÉCURISÉE (pdf_viewer.js) -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-dark text-white
-                            d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="bi bi-file-earmark-pdf me-2"></i>Lecture du mémoire
-                    </span>
-                    <span class="badge bg-warning text-dark small">
-                        <i class="bi bi-lock-fill me-1"></i>Lecture seule
-                    </span>
-                </div>
-
-                <div class="card-body p-0">
-                    <div id="pdfViewer"
-                         data-url="/views/commentateur/dashboard.php?action=voirPdf&id=<?= (int)$memoire['id'] ?>"
-                         style="height:620px; background:#525659; position:relative;">
-
-                        <!-- Barre de navigation -->
-                        <div id="pdfToolbar"
-                             class="d-flex align-items-center gap-2 px-3 py-2 bg-secondary text-white"
-                             style="height:46px;">
-                            <button class="btn btn-sm btn-light" id="btnPrevPage"
-                                    disabled title="Page précédente">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <span class="small">
-                                Page&nbsp;<span id="pageActuelle">—</span>
-                                &nbsp;/&nbsp;<span id="totalPages">—</span>
-                            </span>
-                            <button class="btn btn-sm btn-light" id="btnNextPage"
-                                    disabled title="Page suivante">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                            <div class="ms-auto d-flex gap-1">
-                                <button class="btn btn-sm btn-light" id="btnZoomMoins"
-                                        title="Zoom -">
-                                    <i class="bi bi-zoom-out"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light" id="btnZoomPlus"
-                                        title="Zoom +">
-                                    <i class="bi bi-zoom-in"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Canvas PDF.js -->
-                        <div style="overflow-y:auto; height:calc(100% - 46px);">
-                            <canvas id="pdfCanvas"
-                                    style="display:block; margin:0 auto;"></canvas>
-                        </div>
-
-                        <!-- Overlay protecteur (anti-clic droit / drag) -->
-                        <div id="pdfOverlay" style="
-                            position:absolute; top:46px; left:0; right:0; bottom:0;
-                            z-index:10; user-select:none; -webkit-user-select:none;">
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-        </div><!-- /col-lg-8 -->
-
-
-        <div class="col-lg-4">
-
-            <!-- Formulaire d'ajout de commentaire -->
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-chat-plus me-2"></i>Laisser un commentaire
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form method="POST"
-                          action="/views/commentateur/dashboard.php?action=ajouterCommentaire"
-                          id="formCommentaire">
-
-                        <input type="hidden" name="memoire_id"
-                               value="<?= (int)$memoire['id'] ?>">
-
-                        <div class="mb-3">
-                            <textarea
-                                class="form-control"
-                                id="contenu"
-                                name="contenu"
-                                rows="5"
-                                maxlength="2000"
-                                placeholder="Votre avis (10 à 2000 caractères)..."
-                                required
-                            ></textarea>
-                            <div class="d-flex justify-content-end mt-1">
-                                <small class="text-muted">
-                                    <span id="compteurCaracteres">0</span>/2000
-                                </small>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-send me-1"></i>Publier
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Liste des commentaires -->
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-light
-                            d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 text-dark">
-                        <i class="bi bi-chat-dots me-2"></i>Commentaires
-                    </h6>
-                    <span class="badge bg-primary"><?= $nbCommentaires ?></span>
-                </div>
-
-                <div class="card-body p-2"
-                     id="listeCommentaires"
-                     style="max-height:500px; overflow-y:auto;">
-
-                    <?php if (empty($commentaires)): ?>
-                        <p class="text-center text-muted small py-3">
-                            <i class="bi bi-chat-slash me-1"></i>
-                            Aucun commentaire. Soyez le premier !
-                        </p>
-
-                    <?php else: ?>
-
-                        <?php foreach ($commentaires as $c): ?>
-                            <div class="card mb-2 border-0 bg-light"
-                                 id="commentaire-<?= $c->getId() ?>">
-                                <div class="card-body p-2">
-
-                                    <!-- En-tête commentaire -->
-                                    <div class="d-flex justify-content-between
-                                                align-items-start mb-1">
-                                        <div>
-                                            <strong class="small">
-                                                <i class="bi bi-person-circle me-1 text-primary"></i>
-                                                <?= htmlspecialchars(
-                                                    $c->getNomAuteur() ?? 'Anonyme'
-                                                ) ?>
-                                            </strong>
-                                            <br>
-                                            <small class="text-muted">
-                                                <?= $c->getDateFormatee() ?>
-                                            </small>
-                                        </div>
-
-                                        <!-- Actions réservées à l'auteur du commentaire -->
-                                        <?php if ($c->getUtilisateurId() === $userId): ?>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-link
-                                                               text-muted p-0"
-                                                        data-bs-toggle="dropdown"
-                                                        aria-label="Options">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu
-                                                           dropdown-menu-end shadow">
-
-                                                    <!-- Modifier -->
-                                                    <li>
-                                                        <button class="dropdown-item small"
-                                                                onclick="ouvrirModification(
-                                                                    <?= $c->getId() ?>,
-                                                                    <?= (int)$memoire['id'] ?>,
-                                                                    `<?= addslashes(
-                                                                        htmlspecialchars(
-                                                                            $c->getContenu()
-                                                                        )
-                                                                    ) ?>`
-                                                                )">
-                                                            <i class="bi bi-pencil me-1"></i>
-                                                            Modifier
-                                                        </button>
-                                                    </li>
-
-                                                    <!-- Supprimer -->
-                                                    <li>
-                                                        <form method="POST"
-                                                              action="/views/commentateur/dashboard.php?action=supprimerCommentaire"
-                                                              onsubmit="return confirm(
-                                                                  'Supprimer ce commentaire ?'
-                                                              )">
-                                                            <input type="hidden"
-                                                                   name="commentaire_id"
-                                                                   value="<?= $c->getId() ?>">
-                                                            <input type="hidden"
-                                                                   name="memoire_id"
-                                                                   value="<?= (int)$memoire['id'] ?>">
-                                                            <button type="submit"
-                                                                    class="dropdown-item
-                                                                           small text-danger">
-                                                                <i class="bi bi-trash me-1"></i>
-                                                                Supprimer
-                                                            </button>
-                                                        </form>
-                                                    </li>
-
-                                                </ul>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-
-                                    <!-- Contenu (attribut de Commentaire.php) -->
-                                    <p class="small mb-0 text-dark">
-                                        <?= $c->getContenuHtml() ?>
-                                    </p>
-
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-
-                    <?php endif; ?>
-
-                </div>
-            </div>
-
-        </div>
-
+      </nav>
     </div>
-</div>
 
-<!-- MODAL MODIFICATION COMMENTAIRE -->
-<div class="modal fade" id="modalModifier" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content shadow">
-            <form method="POST"
-                  action="/views/commentateur/dashboard.php?action=modifierCommentaire">
+    <!-- Contenu -->
+    <div class="col-md-10 p-4">
 
-                <input type="hidden" name="commentaire_id" id="modif_commentaire_id">
-                <input type="hidden" name="memoire_id"     id="modif_memoire_id">
+      <!-- Fil d'ariane -->
+      <nav style="font-size:0.85rem;margin-bottom:12px">
+        <a href="/views/commentateur/rechercher.php"
+           style="color:var(--primary);text-decoration:none">
+          ← Retour à la recherche
+        </a>
+      </nav>
 
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-pencil me-2"></i>Modifier le commentaire
-                    </h5>
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body">
-                    <textarea
-                        class="form-control"
-                        name="contenu"
-                        id="modif_contenu"
-                        rows="5"
-                        maxlength="2000"
-                        required
-                    ></textarea>
-                    <div class="d-flex justify-content-end mt-1">
-                        <small class="text-muted">
-                            <span id="modif_compteur">0</span>/2000
-                        </small>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i>Enregistrer
-                    </button>
-                </div>
-
-            </form>
+      <?php if ($successMsg): ?>
+        <div class="alert alert-success mb-3">
+          <i class="bi bi-check-circle me-2"></i><?= htmlspecialchars($successMsg) ?>
         </div>
-    </div>
-</div>
+      <?php endif; ?>
+      <?php if ($errorMsg): ?>
+        <div class="alert alert-danger mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i><?= htmlspecialchars($errorMsg) ?>
+        </div>
+      <?php endif; ?>
 
-<!-- PDF.js CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="/js/pdf_viewer.js"></script>
+      <div class="row g-4">
+
+        <!-- ── Colonne gauche : infos + like + commentaires ── -->
+        <div class="col-md-5">
+
+          <!-- Carte infos -->
+          <div class="card mb-4">
+            <div class="card-header-uatm">
+              <i class="bi bi-info-circle me-2"></i>Informations
+            </div>
+            <div class="card-body">
+
+              <!-- Badge type + année -->
+              <div class="mb-3">
+                <span style="font-size:0.8rem;font-weight:600;
+                             background:<?= $memoire['type_diplome'] === 'master' ? 'var(--primary)' : 'var(--secondary)' ?>;
+                             color:#fff;padding:3px 10px;border-radius:20px">
+                  <?= htmlspecialchars(ucfirst($memoire['type_diplome'])) ?>
+                </span>
+                <span style="font-size:0.8rem;color:var(--text-muted);margin-left:8px">
+                  Soutenance <?= (int) $memoire['annee_soutenance'] ?>
+                </span>
+              </div>
+
+              <h5 class="fw-bold mb-2" style="color:var(--text-main);line-height:1.4">
+                <?= htmlspecialchars($memoire['titre']) ?>
+              </h5>
+
+              <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px">
+                <?= htmlspecialchars($memoire['theme']) ?>
+              </p>
+
+              <hr style="border-color:var(--border)">
+
+              <!-- Auteur -->
+              <div class="mb-2" style="font-size:0.88rem">
+                <span style="color:var(--text-muted)">Auteur</span><br>
+                <strong><?= htmlspecialchars($memoire['nom_etudiant']) ?></strong>
+              </div>
+
+              <!-- Filière -->
+              <?php if ($memoire['nom_filiere']): ?>
+                <div class="mb-2" style="font-size:0.88rem">
+                  <span style="color:var(--text-muted)">Filière</span><br>
+                  <strong><?= htmlspecialchars($memoire['nom_filiere']) ?></strong>
+                </div>
+              <?php endif; ?>
+
+              <!-- Centre -->
+              <?php if ($memoire['nom_centre']): ?>
+                <div class="mb-2" style="font-size:0.88rem">
+                  <span style="color:var(--text-muted)">Centre</span><br>
+                  <strong><?= htmlspecialchars($memoire['nom_centre']) ?></strong>
+                </div>
+              <?php endif; ?>
+
+              <!-- Professeur validateur -->
+              <?php if ($memoire['nom_professeur']): ?>
+                <div class="mb-2" style="font-size:0.88rem">
+                  <span style="color:var(--text-muted)">Validé par</span><br>
+                  <strong><?= htmlspecialchars($memoire['nom_professeur']) ?></strong>
+                </div>
+              <?php endif; ?>
+
+              <hr style="border-color:var(--border)">
+
+              <!-- Stats likes / commentaires + bouton like -->
+              <div class="d-flex align-items-center justify-content-between">
+                <div style="font-size:0.9rem;color:var(--text-muted)">
+                  <i class="bi bi-heart-fill me-1" style="color:var(--danger)"></i>
+                  <span id="nb-likes"><?= (int) $memoire['nb_likes'] ?></span> like<?= (int) $memoire['nb_likes'] > 1 ? 's' : '' ?>
+                  <span class="mx-2">·</span>
+                  <i class="bi bi-chat me-1"></i>
+                  <?= count($commentaires) ?> commentaire<?= count($commentaires) > 1 ? 's' : '' ?>
+                </div>
+
+                <!-- Bouton like -->
+                <form method="POST" action="/controllers/CommentateurController.php"
+                      style="margin:0">
+                  <input type="hidden" name="action"     value="toggler_like">
+                  <input type="hidden" name="memoire_id" value="<?= $memoire['id_memoire'] ?>">
+                  <input type="hidden" name="retour"
+                         value="/views/commentateur/consulter_memoire.php?id=<?= $memoire['id_memoire'] ?>">
+                  <button type="submit"
+                          class="btn btn-sm <?= $aLike ? 'btn-danger' : 'btn-outline-danger' ?>"
+                          title="<?= $aLike ? 'Retirer mon like' : 'Liker ce mémoire' ?>">
+                    <i class="bi bi-heart<?= $aLike ? '-fill' : '' ?> me-1"></i>
+                    <?= $aLike ? 'Je n\'aime plus' : 'J\'aime' ?>
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Section commentaires ── -->
+          <div class="card" id="commentaires">
+            <div class="card-header-uatm">
+              <i class="bi bi-chat-text me-2"></i>
+              Commentaires (<?= count($commentaires) ?>)
+            </div>
+            <div class="card-body">
+
+              <!-- Formulaire d'ajout -->
+              <form method="POST" action="/controllers/CommentateurController.php"
+                    class="mb-4">
+                <input type="hidden" name="action"     value="ajouter_commentaire">
+                <input type="hidden" name="memoire_id" value="<?= $memoire['id_memoire'] ?>">
+                <label for="contenu" style="font-size:0.88rem;margin-bottom:6px">
+                  Laisser un commentaire
+                </label>
+                <textarea name="contenu"
+                          id="contenu"
+                          class="form-control"
+                          rows="3"
+                          maxlength="2000"
+                          placeholder="Votre avis sur ce mémoire…"
+                          required></textarea>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                  <small id="compteur-chars"
+                         style="color:var(--text-muted)">0 / 2000</small>
+                  <button type="submit" class="btn btn-uatm btn-sm">
+                    <i class="bi bi-send me-1"></i> Publier
+                  </button>
+                </div>
+              </form>
+
+              <!-- Liste des commentaires -->
+              <?php if (empty($commentaires)): ?>
+                <p style="color:var(--text-muted);font-size:0.88rem;text-align:center">
+                  Aucun commentaire pour l'instant. Soyez le premier !
+                </p>
+              <?php else: ?>
+                <div style="max-height:400px;overflow-y:auto">
+                  <?php foreach ($commentaires as $c): ?>
+                    <div style="padding:12px 0;
+                                border-bottom:1px solid var(--border)"
+                         class="commentaire-item">
+
+                      <!-- En-tête commentaire -->
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <strong style="font-size:0.88rem">
+                            <?= htmlspecialchars($c['nom_auteur']) ?>
+                          </strong>
+                          <span style="font-size:0.75rem;
+                                       color:var(--text-muted);
+                                       margin-left:6px">
+                            <?= htmlspecialchars(ucfirst($c['role_auteur'])) ?>
+                          </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                          <span style="font-size:0.75rem;color:var(--text-muted)">
+                            <?= date('d/m/Y à H:i', strtotime($c['date_creation'])) ?>
+                          </span>
+                          <!-- Bouton supprimer (auteur uniquement) -->
+                          <?php if ((int) $c['utilisateur_id'] === $userId): ?>
+                            <form method="POST"
+                                  action="/controllers/CommentateurController.php"
+                                  style="margin:0">
+                              <input type="hidden" name="action"
+                                     value="supprimer_commentaire">
+                              <input type="hidden" name="id_commentaire"
+                                     value="<?= $c['id_commentaire'] ?>">
+                              <input type="hidden" name="memoire_id"
+                                     value="<?= $memoire['id_memoire'] ?>">
+                              <button type="submit"
+                                      class="btn btn-sm"
+                                      style="padding:0 4px;color:var(--text-muted);
+                                             background:none;border:none"
+                                      title="Supprimer"
+                                      onclick="return confirm('Supprimer ce commentaire ?')">
+                                <i class="bi bi-trash3" style="font-size:0.8rem"></i>
+                              </button>
+                            </form>
+                          <?php endif; ?>
+                        </div>
+                      </div>
+
+                      <!-- Contenu -->
+                      <p style="font-size:0.88rem;
+                                margin:6px 0 0;
+                                white-space:pre-line;
+                                color:var(--text-main)">
+                        <?= nl2br(htmlspecialchars($c['contenu'])) ?>
+                      </p>
+
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── Colonne droite : visionneuse PDF ── -->
+        <div class="col-md-7">
+          <div class="card">
+            <div class="card-header-uatm d-flex justify-content-between align-items-center">
+              <span>
+                <i class="bi bi-file-earmark-pdf me-2"></i>
+                <?= htmlspecialchars(mb_substr($memoire['titre'], 0, 50)) ?>
+              </span>
+              <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
+                 target="_blank"
+                 class="btn btn-sm"
+                 style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:0.8rem">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir
+              </a>
+            </div>
+            <div class="card-body p-2">
+              <div id="pdf-container">
+                <iframe
+                  src="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
+                  width="100%"
+                  height="750px"
+                  style="border:none;border-radius:var(--radius)">
+                  <p style="color:#fff;padding:20px">
+                    Votre navigateur ne supporte pas l'affichage intégré.
+                    <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
+                       style="color:var(--secondary)">
+                      Télécharger le mémoire
+                    </a>
+                  </p>
+                </iframe>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-// Compteur caractères – formulaire ajout
-document.getElementById('contenu').addEventListener('input', function () {
-    document.getElementById('compteurCaracteres').textContent = this.value.length;
-});
+// Compteur de caractères pour le champ commentaire
+const textarea  = document.getElementById('contenu');
+const compteur  = document.getElementById('compteur-chars');
 
-// Compteur caractères – modal modification
-document.getElementById('modif_contenu').addEventListener('input', function () {
-    document.getElementById('modif_compteur').textContent = this.value.length;
-});
-
-
-function ouvrirModification(commentaireId, memoireId, contenu) {
-    document.getElementById('modif_commentaire_id').value = commentaireId;
-    document.getElementById('modif_memoire_id').value     = memoireId;
-    document.getElementById('modif_contenu').value        = contenu;
-    document.getElementById('modif_compteur').textContent = contenu.length;
-
-    new bootstrap.Modal(document.getElementById('modalModifier')).show();
+if (textarea && compteur) {
+  textarea.addEventListener('input', function () {
+    const nb = this.value.length;
+    compteur.textContent = nb + ' / 2000';
+    compteur.style.color = nb > 1800 ? 'var(--danger)' : 'var(--text-muted)';
+  });
 }
 </script>
 

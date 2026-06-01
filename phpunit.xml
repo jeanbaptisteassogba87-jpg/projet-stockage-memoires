@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================
+     phpunit.xml
+     Rôle : fichier de configuration PHPUnit
+            Indique où trouver les tests et les fichiers source
+            Lancé avec : ./vendor/bin/phpunit
+     ============================================================ -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         stopOnFailure="false">
+
+    <!-- Dossier contenant les fichiers de test -->
+    <testsuites>
+        <testsuite name="UATM GASA Formation">
+            <directory>tests/</directory>
+        </testsuite>
+    </testsuites>
+
+    <!-- Couverture de code : les fichiers à analyser -->
+    <source>
+        <include>
+            <directory>models/</directory>
+        </include>
+    </source>
+
+</phpunit>

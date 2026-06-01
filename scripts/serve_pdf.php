@@ -1,10 +1,5 @@
 <?php
-/**
- * Script de service des fichiers PDF stockés
- * Sécurise l'accès aux fichiers en dehors du webroot
- * 
- * Usage: serve_pdf.php?id=123
- */
+
 
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/constants.php';
@@ -12,67 +7,73 @@ require_once __DIR__ . '/../dao/MemoireDAO.php';
 
 requireAuth();
 
-// Récupérer l'ID du mémoire
-$memoireId = (int)($_GET['id'] ?? 0);
-
-if ($memoireId <= 0) {
+$id = (int) ($_GET['id'] ?? 0);
+if (!$id) {
     http_response_code(400);
-    die('ID de mémoire invalide');
+    exit('Identifiant manquant.');
 }
 
-// Récupérer les infos du mémoire
-$dao = new MemoireDAO();
-$memoire = $dao->trouverParId($memoireId);
+$memoireDAO = new MemoireDAO();
+$memoire    = $memoireDAO->trouverParId($id);
 
 if (!$memoire) {
     http_response_code(404);
-    die('Mémoire introuvable');
+    exit('Mémoire introuvable.');
 }
 
-// Vérifier les permissions
-// - L'étudiant peut voir son propre mémoire
-// - Les utilisateurs authentifiés peuvent voir les mémoires validés/publiés
-// - Les professeurs assignés peuvent voir tous les mémoires qu'ils vérifient
+// ── Contrôle d'accès par rôle ────────────────────────────────
+$role     = $_SESSION['user_role'];
+$userId   = (int) $_SESSION['user_id'];
+$autorise = false;
 
-$isOwner = ($memoire['etudiant_id'] == $_SESSION['user_id']);
-$isAssignedProfessor = (
-    $_SESSION['user_role'] === ROLE_PROFESSEUR 
-    && $memoire['professeur_id'] == $_SESSION['user_id']
-);
-$isPublic = in_array($memoire['statut'], [STATUT_VALIDE, STATUT_PUBLIE]);
-$isDirector = $_SESSION['user_role'] === ROLE_DIRECTEUR;
-$isTechnician = $_SESSION['user_role'] === ROLE_TECHNICIEN;
+switch ($role) {
+    case ROLE_ETUDIANT:
+        $autorise = ((int) $memoire['etudiant_id'] === $userId);
+        break;
+    case ROLE_PROFESSEUR:
+        $autorise = (
+            (int) $memoire['professeur_id'] === $userId
+            || $memoire['statut'] === STATUT_EN_ATTENTE
+        );
+        break;
+    case ROLE_DIRECTEUR:
+    case ROLE_TECHNICIEN:
+        $autorise = true;
+        break;
+    default:
+        $autorise = ($memoire['statut'] === STATUT_PUBLIE);
+        break;
+}
 
-// Refuser l'accès si non autorisé
-if (!($isOwner || $isAssignedProfessor || $isPublic || $isDirector || $isTechnician)) {
+if (!$autorise) {
     http_response_code(403);
-    die('Accès refusé');
+    exit('Accès refusé.');
 }
 
-// Chemin du fichier
-$filePath = PDF_STORAGE_PATH . $memoire['fichier_pdf'];
+// ── Chemin du fichier ────────────────────────────────────────
+$cheminFichier = PDF_STORAGE_PATH . basename($memoire['fichier_pdf']);
 
-// Vérifier que le fichier existe et est dans le bon répertoire
-if (!file_exists($filePath) || !is_file($filePath)) {
+if (!file_exists($cheminFichier) || !is_readable($cheminFichier)) {
     http_response_code(404);
-    die('Fichier introuvable');
+    exit('Fichier introuvable sur le serveur.');
 }
 
-// Vérifier que le chemin est bien dans le répertoire autorisé (prévention de traversée)
-$realPath = realpath($filePath);
-$allowedDir = realpath(PDF_STORAGE_PATH);
-
-if ($realPath === false || strpos($realPath, $allowedDir) !== 0) {
-    http_response_code(403);
-    die('Accès refusé');
-}
-
-// Servir le fichier
+// ── Headers sécurisés anti-téléchargement ───────────────────
 header('Content-Type: application/pdf');
-header('Content-Disposition: inline; filename="' . basename($memoire['fichier_pdf']) . '"');
-header('Content-Length: ' . filesize($filePath));
-header('Cache-Control: public, max-age=3600');
+// inline + nom générique = pas d'invitation à sauvegarder
+header('Content-Disposition: inline; filename="document.pdf"');
+// no-store = jamais écrit sur disque par le navigateur
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-Content-Type-Options: nosniff');
+header("Content-Security-Policy: default-src 'none'");
+header('Content-Length: ' . filesize($cheminFichier));
 
-// Lire et envoyer le fichier
-readfile($filePath);
+if (ob_get_level()) {
+    ob_end_clean();
+}
+
+readfile($cheminFichier);
 exit;

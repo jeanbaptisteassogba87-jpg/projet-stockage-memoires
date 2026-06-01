@@ -1,224 +1,246 @@
 <?php
 
-require_once __DIR__ . '/../layout/header.php';
+// Rôle : moteur de recherche des mémoires publiés
+//        Accessible à tous les utilisateurs connectés
+//        Filtres : mots-clés, type, année, filière
+
+
+$pageTitle = 'Rechercher un mémoire — UATM GASA Formation';
+
+require_once __DIR__ . '/../../config/session.php';
+require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../dao/MemoirePublicDAO.php';
+require_once __DIR__ . '/../../dao/LikeDAO.php';
+
+requireAuth();
+
+$dao     = new MemoirePublicDAO();
+$likeDAO = new LikeDAO();
+
+// Récupérer les filtres depuis GET
+$motsCles = trim($_GET['q']       ?? '');
+$type     = trim($_GET['type']    ?? '');
+$annee    = trim($_GET['annee']   ?? '');
+$filiere  = trim($_GET['filiere'] ?? '');
+
+// Lancer la recherche uniquement si au moins un filtre est renseigné
+// ou si la page est chargée sans filtre (afficher tout)
+$memoires   = $dao->rechercher($motsCles, $type, $annee, $filiere);
+$annees     = $dao->getAnneesDisponibles();
+$filieres   = $dao->getFilieresDisponibles();
+
+// Récupérer les likes de l'utilisateur connecté pour ces mémoires
+$memoireIds = array_column($memoires, 'id_memoire');
+$mesLikes   = $likeDAO->getLikesUtilisateur((int) $_SESSION['user_id'], $memoireIds);
+$mesLikes   = array_flip($mesLikes); // transformer en tableau associatif pour lookup rapide
+
+$aRecherche = ($motsCles || $type || $annee || $filiere);
+
+// Sidebar selon le rôle
+$role = $_SESSION['user_role'];
 ?>
+<?php require_once __DIR__ . '/../layout/header.php'; ?>
+<?php require_once __DIR__ . '/../layout/navbar.php'; ?>
 
-<div class="container py-4">
+<div class="container-fluid">
+  <div class="row">
 
-    <!-- TITRE -->
-    <div class="text-center mb-4">
-        <h2 class="fw-bold text-primary">
-            <i class="bi bi-search me-2"></i>Recherche de mémoires
-        </h2>
-        <p class="text-muted">
-            Consultez les mémoires de l'UATM GASA Formation.
-        </p>
-    </div>
+    <!-- Sidebar dynamique selon le rôle -->
+    <div class="col-md-2 px-0 sidebar">
+      <nav class="nav flex-column pt-3">
 
-    <!-- FORMULAIRE DE RECHERCHE -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <form method="GET"
-                  action="/views/commentateur/dashboard.php"
-                  id="formRecherche"
-                  autocomplete="off">
-
-                <input type="hidden" name="action" value="recherche">
-
-                <div class="row g-3 align-items-end">
-
-                    <!-- Mot-clé -->
-                    <div class="col-12 col-md-5 position-relative">
-                        <label for="mot_cle" class="form-label fw-semibold">
-                            <i class="bi bi-keyboard me-1"></i>Mot-clé
-                        </label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="mot_cle"
-                            name="mot_cle"
-                            placeholder="Titre, thème, auteur..."
-                            value="<?= htmlspecialchars($motCle ?? '') ?>"
-                        >
-                        <!-- Suggestions AJAX (recherche.js) -->
-                        <ul class="list-group position-absolute w-100 shadow z-3 d-none"
-                            id="suggestions"
-                            style="top:100%; left:0; z-index:1000;">
-                        </ul>
-                    </div>
-
-                    <!-- Filière -->
-                    <div class="col-6 col-md-2">
-                        <label for="filiere" class="form-label fw-semibold">
-                            <i class="bi bi-diagram-3 me-1"></i>Filière
-                        </label>
-                        <select class="form-select" id="filiere" name="filiere">
-                            <option value="">Toutes</option>
-                            <?php foreach ($filieres as $f): ?>
-                                <option value="<?= htmlspecialchars($f) ?>"
-                                    <?= ($filiere === $f) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($f) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <!-- Niveau -->
-                    <div class="col-6 col-md-2">
-                        <label for="niveau" class="form-label fw-semibold">
-                            <i class="bi bi-mortarboard me-1"></i>Niveau
-                        </label>
-                        <select class="form-select" id="niveau" name="niveau">
-                            <option value="">Tous</option>
-                            <?php foreach ($niveaux as $n): ?>
-                                <option value="<?= htmlspecialchars($n) ?>"
-                                    <?= ($niveau === $n) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($n) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <!-- Année -->
-                    <div class="col-6 col-md-2">
-                        <label for="annee" class="form-label fw-semibold">
-                            <i class="bi bi-calendar me-1"></i>Année
-                        </label>
-                        <select class="form-select" id="annee" name="annee">
-                            <option value="">Toutes</option>
-                            <?php foreach ($annees as $a): ?>
-                                <option value="<?= (int)$a ?>"
-                                    <?= ((int)$annee === (int)$a) ? 'selected' : '' ?>>
-                                    <?= (int)$a ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <!-- Bouton recherche -->
-                    <div class="col-6 col-md-1">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i>
-                        </button>
-                    </div>
-
-                </div>
-
-                <?php if ($motCle || $filiere || $annee || $niveau): ?>
-                    <div class="mt-2">
-                        <a href="/views/commentateur/dashboard.php?action=recherche"
-                           class="text-secondary small">
-                            <i class="bi bi-x-circle me-1"></i>Réinitialiser les filtres
-                        </a>
-                    </div>
-                <?php endif; ?>
-
-            </form>
-        </div>
-    </div>
-
-    <!-- RÉSULTATS -->
-    <?php if ($motCle || $filiere || $annee || $niveau): ?>
-
-        <p class="text-muted mb-3">
-            <strong><?= $totalResultats ?></strong>
-            résultat<?= $totalResultats > 1 ? 's' : '' ?> trouvé<?= $totalResultats > 1 ? 's' : '' ?>
-        </p>
-
-        <?php if (empty($memoires)): ?>
-
-            <div class="alert alert-info text-center">
-                <i class="bi bi-info-circle me-2"></i>
-                Aucun mémoire ne correspond à votre recherche.
-                <br><small>Essayez d'autres mots-clés ou filtres.</small>
-            </div>
-
-        <?php else: ?>
-
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4"
-                 id="listeMemoires">
-
-                <?php foreach ($memoires as $m): ?>
-                    <div class="col">
-                        <div class="card h-100 shadow-sm border-0 carte-memoire">
-
-                            <!-- En-tête -->
-                            <div class="card-header bg-primary text-white
-                                        d-flex justify-content-between align-items-center">
-                                <span class="badge bg-white text-primary fw-bold">
-                                    <?= htmlspecialchars($m['type_diplome'] ?? $m['niveau'] ?? '') ?>
-                                </span>
-                                <small><?= htmlspecialchars($m['filiere'] ?? '') ?></small>
-                            </div>
-
-                            <div class="card-body d-flex flex-column">
-
-                                <!-- Titre -->
-                                <h6 class="card-title fw-bold text-dark mb-1">
-                                    <?= htmlspecialchars($m['titre']) ?>
-                                </h6>
-
-                                <!-- Auteur + Année -->
-                                <p class="text-muted small mb-2">
-                                    <i class="bi bi-person me-1"></i>
-                                    <?= htmlspecialchars($m['auteur_nom']) ?>
-                                    &nbsp;|&nbsp;
-                                    <i class="bi bi-calendar2 me-1"></i>
-                                    <?= (int)($m['annee_soutenance'] ?? 0) ?>
-                                </p>
-
-                                <!-- Thème -->
-                                <?php if (!empty($m['theme'])): ?>
-                                    <p class="card-text text-secondary small flex-grow-1">
-                                        <?= htmlspecialchars(
-                                            mb_strimwidth($m['theme'], 0, 120, '...')
-                                        ) ?>
-                                    </p>
-                                <?php endif; ?>
-
-                            </div>
-
-                            <!-- Pied de carte -->
-                            <div class="card-footer d-flex justify-content-between
-                                        align-items-center bg-white border-top">
-                                <div class="d-flex gap-3 text-muted small">
-                                    <span>
-                                        <i class="bi bi-heart me-1"></i>
-                                        <?= (int)($m['nb_likes'] ?? 0) ?>
-                                    </span>
-                                    <span>
-                                        <i class="bi bi-chat-dots me-1"></i>
-                                        <?= (int)($m['nb_commentaires'] ?? 0) ?>
-                                    </span>
-                                </div>
-                                <a href="/views/commentateur/dashboard.php?action=consulter&id=<?= (int)$m['id'] ?>"
-                                   class="btn btn-sm btn-primary">
-                                    <i class="bi bi-eye me-1"></i>Consulter
-                                </a>
-                            </div>
-
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-
-            </div>
-
+        <?php if ($role === ROLE_ETUDIANT): ?>
+          <a class="nav-link" href="/views/etudiant/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+          <a class="nav-link" href="/views/etudiant/deposer_memoire.php">
+            <i class="bi bi-upload"></i> Déposer un mémoire
+          </a>
+        <?php elseif ($role === ROLE_PROFESSEUR): ?>
+          <a class="nav-link" href="/views/professeur/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+          <a class="nav-link" href="/views/professeur/liste_memoires.php">
+            <i class="bi bi-list-check"></i> Mémoires à vérifier
+          </a>
+        <?php elseif ($role === ROLE_DIRECTEUR): ?>
+          <a class="nav-link" href="/views/directeur/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
+          <a class="nav-link" href="/views/directeur/gerer_visibilite.php">
+            <i class="bi bi-eye"></i> Gérer la visibilité
+          </a>
+        <?php elseif ($role === ROLE_TECHNICIEN): ?>
+          <a class="nav-link" href="/views/technicien/dashboard.php">
+            <i class="bi bi-speedometer2"></i> Tableau de bord
+          </a>
         <?php endif; ?>
 
-    <?php else: ?>
+        <a class="nav-link active" href="/views/commentateur/rechercher.php">
+          <i class="bi bi-search"></i> Consulter mémoires
+        </a>
 
-        <!-- Invitation initiale -->
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-book-half" style="font-size:4rem; opacity:.3;"></i>
-            <p class="mt-3 fs-5">
-                Utilisez les filtres ci-dessus pour trouver un mémoire.
+      </nav>
+    </div>
+
+    <!-- Contenu -->
+    <div class="col-md-10 p-4">
+
+      <h2 class="section-title">Bibliothèque des mémoires</h2>
+
+      <!-- Formulaire de recherche -->
+      <div class="card mb-4">
+        <div class="card-body py-3">
+          <form method="GET" id="form-recherche">
+
+            <!-- Barre principale -->
+            <div class="input-group mb-3">
+              <span class="input-group-text" style="background:var(--primary);color:#fff;border:none">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text"
+                     name="q"
+                     class="form-control"
+                     placeholder="Rechercher par titre, thème, auteur…"
+                     value="<?= htmlspecialchars($motsCles) ?>"
+                     autofocus>
+              <button type="submit" class="btn btn-uatm">
+                Rechercher
+              </button>
+            </div>
+
+            <!-- Filtres avancés -->
+            <div class="row g-2">
+              <div class="col-md-3">
+                <select name="type" class="form-select form-select-sm">
+                  <option value="">Tous les types</option>
+                  <option value="licence" <?= $type === 'licence' ? 'selected' : '' ?>>Licence</option>
+                  <option value="master"  <?= $type === 'master'  ? 'selected' : '' ?>>Master</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="annee" class="form-select form-select-sm">
+                  <option value="">Toutes les années</option>
+                  <?php foreach ($annees as $a): ?>
+                    <option value="<?= $a ?>" <?= $annee == $a ? 'selected' : '' ?>>
+                      <?= $a ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="filiere" class="form-select form-select-sm">
+                  <option value="">Toutes les filières</option>
+                  <?php foreach ($filieres as $f): ?>
+                    <option value="<?= htmlspecialchars($f) ?>"
+                            <?= $filiere === $f ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($f) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <?php if ($aRecherche): ?>
+                  <a href="/views/commentateur/rechercher.php"
+                     class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-x me-1"></i> Effacer
+                  </a>
+                <?php endif; ?>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- Résultats -->
+      <?php if ($aRecherche): ?>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:16px">
+          <?= count($memoires) ?> résultat<?= count($memoires) > 1 ? 's' : '' ?>
+          pour « <strong><?= htmlspecialchars($motsCles ?: implode(', ', array_filter([$type, $annee, $filiere]))) ?></strong> »
+        </p>
+      <?php endif; ?>
+
+      <?php if (empty($memoires)): ?>
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <i class="bi bi-journal-x" style="font-size:3rem;color:var(--text-muted)"></i>
+            <p class="mt-3" style="color:var(--text-muted)">
+              <?= $aRecherche ? 'Aucun mémoire ne correspond à votre recherche.' : 'Aucun mémoire publié pour le moment.' ?>
             </p>
-            <p class="small">Cherchez par titre, thème, auteur, filière, niveau ou année.</p>
+          </div>
         </div>
 
-    <?php endif; ?>
+      <?php else: ?>
+        <div class="row g-3">
+          <?php foreach ($memoires as $m): ?>
+            <?php $aLike = isset($mesLikes[$m['id_memoire']]); ?>
+            <div class="col-md-6 col-lg-4">
+              <div class="card h-100"
+                   style="transition:box-shadow 0.2s"
+                   onmouseover="this.style.boxShadow='0 4px 16px rgba(26,60,110,0.13)'"
+                   onmouseout="this.style.boxShadow=''">
+                <div class="card-body d-flex flex-column">
 
+                  <!-- Type de diplôme -->
+                  <div class="mb-2">
+                    <span style="font-size:0.75rem;font-weight:600;
+                                 background:<?= $m['type_diplome'] === 'master' ? 'var(--primary)' : 'var(--secondary)' ?>;
+                                 color:#fff;padding:2px 8px;border-radius:20px">
+                      <?= htmlspecialchars(ucfirst($m['type_diplome'])) ?>
+                    </span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:6px">
+                      <?= (int) $m['annee_soutenance'] ?>
+                    </span>
+                  </div>
+
+                  <!-- Titre -->
+                  <h6 class="fw-bold mb-1" style="color:var(--text-main);line-height:1.4">
+                    <?= htmlspecialchars($m['titre']) ?>
+                  </h6>
+
+                  <!-- Thème -->
+                  <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;flex-grow:1">
+                    <?= htmlspecialchars(
+                        mb_strlen($m['theme']) > 80
+                        ? mb_substr($m['theme'], 0, 80) . '…'
+                        : $m['theme']
+                    ) ?>
+                  </p>
+
+                  <!-- Auteur + filière -->
+                  <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px">
+                    <i class="bi bi-person me-1"></i>
+                    <?= htmlspecialchars($m['nom_etudiant']) ?>
+                    <?php if ($m['nom_filiere']): ?>
+                      · <i class="bi bi-book me-1"></i><?= htmlspecialchars($m['nom_filiere']) ?>
+                    <?php endif; ?>
+                  </div>
+
+                  <!-- Stats + actions -->
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div style="font-size:0.82rem;color:var(--text-muted)">
+                      <i class="bi bi-chat me-1"></i><?= (int) $m['nb_commentaires'] ?>
+                      <span class="mx-2">·</span>
+                      <i class="bi bi-heart<?= $aLike ? '-fill' : '' ?> me-1"
+                         style="color:<?= $aLike ? 'var(--danger)' : 'inherit' ?>">
+                      </i><?= (int) $m['nb_likes'] ?>
+                    </div>
+                    <a href="/views/commentateur/consulter_memoire.php?id=<?= $m['id_memoire'] ?>"
+                       class="btn btn-uatm btn-sm">
+                      Consulter
+                    </a>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+    </div>
+  </div>
 </div>
 
-<script src="/js/recherche.js"></script>
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

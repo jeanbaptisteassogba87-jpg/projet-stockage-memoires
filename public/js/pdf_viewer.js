@@ -1,187 +1,165 @@
-document.addEventListener('DOMContentLoaded', function () {
 
-    const viewer = document.getElementById('pdfViewer');
-    if (!viewer) return;
 
-    // ── Vérification PDF.js 
-    if (typeof pdfjsLib === 'undefined') {
-        afficherErreur("PDF.js non chargé. Vérifiez le CDN dans consulter.php.");
-        return;
-    }
+(function () {
+  'use strict';
 
+  // ── Variables d'état ──────────────────────────────────────
+  let pdfDoc      = null;   // document PDF chargé
+  let pageActuelle = 1;     // page affichée
+  let totalPages  = 0;      // nombre total de pages
+  let echelle     = 1.2;    // zoom actuel (1.2 = 120%)
+  let enRendu     = false;  // verrou pour éviter le double rendu
+
+  // ── Éléments du DOM ───────────────────────────────────────
+  const canvas      = document.getElementById('pdf-canvas');
+  const conteneur   = document.getElementById('pdf-container');
+
+  // Si la visionneuse n'est pas sur cette page, on arrête
+  if (!canvas || !conteneur) return;
+
+  const ctx         = canvas.getContext('2d');
+  const urlPdf      = canvas.dataset.url; // URL du PDF passée via data-url
+
+  if (!urlPdf) return;
+
+  // ── Configurer PDF.js ─────────────────────────────────────
+  // Indiquer où trouver le worker PDF.js
+  if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  } else {
+    // PDF.js non chargé — afficher un message d'erreur
+    conteneur.innerHTML =
+      '<p style="color:#fff;padding:20px;text-align:center">' +
+      'Impossible de charger la visionneuse PDF.</p>';
+    return;
+  }
 
-    // ── Éléments 
-    const canvas       = document.getElementById('pdfCanvas');
-    const ctx          = canvas.getContext('2d');
-    const spanPage     = document.getElementById('pageActuelle');
-    const spanTotal    = document.getElementById('totalPages');
-    const btnPrev      = document.getElementById('btnPrevPage');
-    const btnNext      = document.getElementById('btnNextPage');
-    const btnZoomMoins = document.getElementById('btnZoomMoins');
-    const btnZoomPlus  = document.getElementById('btnZoomPlus');
-    const overlay      = document.getElementById('pdfOverlay');
+  // ── Charger le document PDF ───────────────────────────────
+  pdfjsLib.getDocument({
+    url:                urlPdf,
+    disableRange:       false,  // permettre le chargement progressif
+    disableStream:      false,
+    disableAutoFetch:   false,
+  }).promise
+    .then(function (doc) {
+      pdfDoc     = doc;
+      totalPages = doc.numPages;
+      mettreAJourInfosPage();
+      rendrePage(pageActuelle);
+    })
+    .catch(function (err) {
+      console.error('Erreur chargement PDF :', err);
+      conteneur.innerHTML =
+        '<p style="color:#fff;padding:20px;text-align:center">' +
+        'Erreur lors du chargement du document.</p>';
+    });
 
-    // URL sécurisée (data-url posé dans consulter.php)
-    const urlPdf = viewer.dataset.url;
+  // ── Rendu d'une page sur le canvas ───────────────────────
+  function rendrePage(numero) {
+    if (enRendu) return;
+    enRendu = true;
 
-    // ── État 
-    let pdfDoc   = null;
-    let pageCour = 1;
-    let echelle  = 1.2;
-    let enRendu  = false;
+    // Afficher un indicateur de chargement
+    const loading = document.getElementById('pdf-loading');
+    if (loading) loading.style.display = 'flex';
 
-    // ── Chargement 
-    pdfjsLib.getDocument(urlPdf).promise
-        .then(pdf => {
-            pdfDoc = pdf;
-            spanTotal.textContent = pdf.numPages;
-            afficherPage(pageCour);
-        })
-        .catch(() => afficherErreur("Impossible de charger le document PDF."));
+    pdfDoc.getPage(numero).then(function (page) {
 
-    // ── Rendu d'une page
-    function afficherPage(num) {
-        if (!pdfDoc || enRendu) return;
-        enRendu = true;
-        spanPage.textContent = num;
+      const viewport = page.getViewport({ scale: echelle });
 
-        pdfDoc.getPage(num).then(page => {
-            const vp = page.getViewport({ scale: echelle });
-            canvas.width  = vp.width;
-            canvas.height = vp.height;
+      // Adapter le canvas à la taille de la page
+      canvas.width  = viewport.width;
+      canvas.height = viewport.height;
 
-            page.render({ canvasContext: ctx, viewport: vp })
-                .promise.then(() => {
-                    enRendu = false;
-                    majBoutons();
-                });
-        });
+      const contexteRendu = {
+        canvasContext: ctx,
+        viewport:      viewport,
+      };
+
+      page.render(contexteRendu).promise.then(function () {
+        enRendu = false;
+        if (loading) loading.style.display = 'none';
+        mettreAJourBoutons();
+      });
+    });
+  }
+
+  // ── Mise à jour des infos de page ────────────────────────
+  function mettreAJourInfosPage() {
+    const el = document.getElementById('pdf-page-info');
+    if (el) el.textContent = 'Page ' + pageActuelle + ' / ' + totalPages;
+  }
+
+  function mettreAJourBoutons() {
+    mettreAJourInfosPage();
+    const btnPrec = document.getElementById('pdf-precedent');
+    const btnSuiv = document.getElementById('pdf-suivant');
+    if (btnPrec) btnPrec.disabled = (pageActuelle <= 1);
+    if (btnSuiv) btnSuiv.disabled = (pageActuelle >= totalPages);
+  }
+
+  // ── Navigation ───────────────────────────────────────────
+  window.pdfPrecedent = function () {
+    if (pageActuelle <= 1) return;
+    pageActuelle--;
+    rendrePage(pageActuelle);
+  };
+
+  window.pdfSuivant = function () {
+    if (pageActuelle >= totalPages) return;
+    pageActuelle++;
+    rendrePage(pageActuelle);
+  };
+
+  // ── Zoom ─────────────────────────────────────────────────
+  window.pdfZoomIn = function () {
+    if (echelle >= 3.0) return; // max 300%
+    echelle += 0.2;
+    rendrePage(pageActuelle);
+  };
+
+  window.pdfZoomOut = function () {
+    if (echelle <= 0.6) return; // min 60%
+    echelle -= 0.2;
+    rendrePage(pageActuelle);
+  };
+
+  // ── Blocages de sécurité ─────────────────────────────────
+
+  // 1. Bloquer le clic droit sur le canvas et le conteneur
+  [canvas, conteneur].forEach(function (el) {
+    el.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      return false;
+    });
+  });
+
+  // 2. Bloquer la sélection de texte sur la zone PDF
+  conteneur.style.userSelect       = 'none';
+  conteneur.style.webkitUserSelect = 'none';
+  conteneur.style.msUserSelect     = 'none';
+
+  // 3. Bloquer les raccourcis clavier dangereux
+  //    Ctrl+S = sauvegarder, Ctrl+P = imprimer,
+  //    Ctrl+U = voir source, Ctrl+Shift+I = devtools (copie possible)
+  document.addEventListener('keydown', function (e) {
+    const ctrl = e.ctrlKey || e.metaKey; // metaKey = Cmd sur Mac
+
+    if (ctrl && (
+      e.key === 's' ||   // Ctrl+S — sauvegarder
+      e.key === 'p' ||   // Ctrl+P — imprimer
+      e.key === 'u'      // Ctrl+U — voir source
+    )) {
+      e.preventDefault();
+      return false;
     }
+  });
 
-    // ── Navigation 
-    btnPrev && btnPrev.addEventListener('click', () => {
-        if (pageCour > 1) { pageCour--; afficherPage(pageCour); }
-    });
+  // 4. Bloquer le glisser-déposer du canvas (évite de faire glisser l'image)
+  canvas.addEventListener('dragstart', function (e) {
+    e.preventDefault();
+    return false;
+  });
 
-    btnNext && btnNext.addEventListener('click', () => {
-        if (pdfDoc && pageCour < pdfDoc.numPages) {
-            pageCour++; afficherPage(pageCour);
-        }
-    });
-
-    // Flèches clavier (désactivées quand le focus est dans un champ texte)
-    document.addEventListener('keydown', e => {
-        const tag = e.target.tagName;
-        if (tag === 'TEXTAREA' || tag === 'INPUT') return;
-
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            if (pdfDoc && pageCour < pdfDoc.numPages) {
-                pageCour++; afficherPage(pageCour);
-            }
-        }
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-            if (pageCour > 1) { pageCour--; afficherPage(pageCour); }
-        }
-    });
-
-    // ── Zoom 
-    btnZoomMoins && btnZoomMoins.addEventListener('click', () => {
-        if (echelle > 0.6) { echelle = +(echelle - 0.2).toFixed(1); afficherPage(pageCour); }
-    });
-
-    btnZoomPlus && btnZoomPlus.addEventListener('click', () => {
-        if (echelle < 3.0) { echelle = +(echelle + 0.2).toFixed(1); afficherPage(pageCour); }
-    });
-
-    // ── Protections 
-
-    // Clic droit sur canvas
-    canvas.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        toast("🔒 Le téléchargement de ce document est protégé.");
-    });
-
-    // Clic droit sur overlay
-    overlay && overlay.addEventListener('contextmenu', e => e.preventDefault());
-
-    // Drag
-    canvas.addEventListener('dragstart',  e => e.preventDefault());
-    overlay && overlay.addEventListener('dragstart', e => e.preventDefault());
-
-    // Raccourcis clavier bloqués
-    document.addEventListener('keydown', e => {
-        const ctrl = e.ctrlKey || e.metaKey;
-
-        if (ctrl && e.key === 's') {
-            e.preventDefault();
-            toast("🔒 L'enregistrement est désactivé.");
-        }
-        if (ctrl && e.key === 'p') {
-            e.preventDefault();
-            toast("🔒 L'impression est désactivée.");
-        }
-        if (e.key === 'PrintScreen') {
-            voilerCanvas();
-            toast("🔒 La capture d'écran est déconseillée.");
-        }
-    });
-
-    // Sélection de texte désactivée sur le canvas
-    canvas.style.userSelect         = 'none';
-    canvas.style.webkitUserSelect   = 'none';
-    canvas.addEventListener('selectstart', e => e.preventDefault());
-
-    // ── Utilitaires 
-
-    function majBoutons() {
-        if (!pdfDoc) return;
-        if (btnPrev) btnPrev.disabled = (pageCour <= 1);
-        if (btnNext) btnNext.disabled = (pageCour >= pdfDoc.numPages);
-    }
-
-    // Voile temporaire du canvas (anti PrintScreen)
-    function voilerCanvas() {
-        ctx.save();
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffffff';
-        ctx.font      = '18px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Document protégé', canvas.width / 2, canvas.height / 2);
-        ctx.restore();
-        setTimeout(() => afficherPage(pageCour), 2000);
-    }
-
-    // Toast d'avertissement (non bloquant)
-    function toast(msg) {
-        const ancien = document.getElementById('pdfToast');
-        if (ancien) ancien.remove();
-
-        const div = document.createElement('div');
-        div.id = 'pdfToast';
-        div.style.cssText = `
-            position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-            background:rgba(20,20,20,.9); color:#fff;
-            padding:10px 22px; border-radius:8px; font-size:14px;
-            z-index:9999; pointer-events:none;
-            box-shadow:0 4px 12px rgba(0,0,0,.3);
-        `;
-        div.textContent = msg;
-        document.body.appendChild(div);
-        setTimeout(() => div.remove(), 3000);
-    }
-
-    // Message d'erreur dans la visionneuse
-    function afficherErreur(msg) {
-        viewer.innerHTML = `
-            <div class="d-flex align-items-center justify-content-center h-100 text-white">
-                <div class="text-center p-4">
-                    <i class="bi bi-exclamation-triangle-fill fs-1 text-warning"></i>
-                    <p class="mt-3">${msg}</p>
-                </div>
-            </div>`;
-    }
-
-});
+})();

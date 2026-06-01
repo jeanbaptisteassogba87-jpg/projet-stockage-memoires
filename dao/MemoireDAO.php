@@ -1,217 +1,14 @@
 <?php
-
-require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/Memoire.php';
+require_once __DIR__ . '/../config/database.php';
 
-class MemoireDAO
-{
+class MemoireDAO {
     private PDO $pdo;
 
-    public function __construct(?PDO $pdo = null)
-    {
-        $this->pdo = $pdo ?? (new Database())->connect();
+    public function __construct() {
+        $db = new Database();
+        $this->pdo = $db->connect();
     }
-
-    // ── READ
-     
-    public function getParId(int $id): ?array
-    {
-        $sql = "SELECT
-                    m.id,
-                    m.titre,
-                    m.theme,
-                    m.fichier_pdf,
-                    m.statut,
-                    m.type_diplome,
-                    m.annee_soutenance,
-                    m.date_depot,
-                    m.remarques,
-                    CONCAT(u.prenom, ' ', u.nom) AS auteur_nom,
-                    u.email                       AS auteur_email,
-                    f.nom_filiere                 AS filiere,
-                    e.niveau_etude                AS niveau
-                FROM memoires m
-                INNER JOIN utilisateurs u ON u.id = m.utilisateur_id
-                LEFT  JOIN etudiant e     ON e.utilisateur_id = m.utilisateur_id
-                LEFT  JOIN filieres f     ON f.id = e.filiere_id
-                WHERE m.id = :id
-                LIMIT 1";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ?: null;
-    }
-
-    
-    public function rechercher(
-        string $motCle  = '',
-        string $filiere = '',
-        int    $annee   = 0,
-        string $niveau  = ''
-    ): array {
-        $conditions = ["m.statut = 'public'"];
-        $params     = [];
-
-        if ($motCle !== '') {
-            $conditions[] = "(m.titre  LIKE :mot_cle
-                           OR m.theme  LIKE :mot_cle
-                           OR CONCAT(u.prenom, ' ', u.nom) LIKE :mot_cle)";
-            $params[':mot_cle'] = '%' . $motCle . '%';
-        }
-
-        if ($filiere !== '') {
-            $conditions[] = "f.nom_filiere = :filiere";
-            $params[':filiere'] = $filiere;
-        }
-
-        if ($annee > 0) {
-            $conditions[] = "m.annee_soutenance = :annee";
-            $params[':annee'] = $annee;
-        }
-
-        if ($niveau !== '') {
-            $conditions[] = "e.niveau_etude = :niveau";
-            $params[':niveau'] = $niveau;
-        }
-
-        $where = implode(' AND ', $conditions);
-
-        $sql = "SELECT
-                    m.id,
-                    m.titre,
-                    m.theme,
-                    m.type_diplome,
-                    m.annee_soutenance,
-                    m.date_depot,
-                    m.fichier_pdf,
-                    m.statut,
-                    CONCAT(u.prenom, ' ', u.nom) AS auteur_nom,
-                    f.nom_filiere                AS filiere,
-                    e.niveau_etude               AS niveau,
-                    (SELECT COUNT(*)
-                     FROM commentaires c
-                     WHERE c.memoire_id = m.id)  AS nb_commentaires,
-                    (SELECT COUNT(*)
-                     FROM likes l
-                     WHERE l.memoire_id = m.id)  AS nb_likes
-                FROM memoires m
-                INNER JOIN utilisateurs u ON u.id = m.utilisateur_id
-                LEFT  JOIN etudiant e     ON e.utilisateur_id = m.utilisateur_id
-                LEFT  JOIN filieres f     ON f.id = e.filiere_id
-                WHERE $where
-                ORDER BY m.annee_soutenance DESC, m.date_depot DESC
-                LIMIT 100";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-   
-    public function getSuggestions(string $terme, int $limite = 8): array
-    {
-        $sql = "SELECT DISTINCT titre
-                FROM memoires
-                WHERE statut = 'public'
-                  AND titre LIKE :terme
-                ORDER BY titre
-                LIMIT :limite";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':terme',  '%' . $terme . '%');
-        $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-    // ── LISTES POUR MENUS DÉROULANTS 
-     
-    public function getFilieres(): array
-    {
-        $sql = "SELECT DISTINCT f.nom_filiere
-                FROM filieres f
-                INNER JOIN etudiant e ON e.filiere_id = f.id
-                INNER JOIN memoires m ON m.utilisateur_id = e.utilisateur_id
-                WHERE m.statut = 'public'
-                ORDER BY f.nom_filiere";
-
-        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
-    }
-   
-    public function getAnnees(): array
-    {
-        $sql = "SELECT DISTINCT annee_soutenance
-                FROM memoires
-                WHERE statut = 'public'
-                  AND annee_soutenance IS NOT NULL
-                ORDER BY annee_soutenance DESC";
-
-        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-     
-    public function getNiveaux(): array
-    {
-        $sql = "SELECT DISTINCT e.niveau_etude
-                FROM etudiant e
-                INNER JOIN memoires m ON m.utilisateur_id = e.utilisateur_id
-                WHERE m.statut = 'public'
-                ORDER BY e.niveau_etude";
-
-        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-    // ── LIKES 
-     
-    public function compterLikes(int $memoireId): int
-    {
-        $sql  = "SELECT COUNT(*) FROM likes WHERE memoire_id = :memoire_id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':memoire_id' => $memoireId]);
-        return (int) $stmt->fetchColumn();
-    }
-
-    
-    public function utilisateurALike(int $memoireId, int $userId): bool
-    {
-        $sql = "SELECT COUNT(*) FROM likes
-                WHERE memoire_id = :memoire_id
-                  AND utilisateur_id = :user_id";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':memoire_id' => $memoireId,
-            ':user_id'    => $userId,
-        ]);
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-
-    public function ajouterLike(int $memoireId, int $userId): bool
-    {
-        $sql = "INSERT IGNORE INTO likes (memoire_id, utilisateur_id, date_creation)
-                VALUES (:memoire_id, :user_id, NOW())";
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            ':memoire_id' => $memoireId,
-            ':user_id'    => $userId,
-        ]);
-    }
-
-    public function retirerLike(int $memoireId, int $userId): bool
-    {
-        $sql = "DELETE FROM likes
-                WHERE memoire_id = :memoire_id
-                  AND utilisateur_id = :user_id";
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            ':memoire_id' => $memoireId,
-            ':user_id'    => $userId,
-        ]);
-    }
-
 
     // Insérer un seul mémoire
     public function ajouterMemoire(Memoire $memoire): bool {
@@ -258,18 +55,6 @@ class MemoireDAO
         return $result ?: null;
     }
 
-    public function trouverParIdEtEtudiant(int $id, int $etudiantId): ?array {
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM memoire WHERE id_memoire = :id AND etudiant_id = :etudiant_id LIMIT 1"
-        );
-        $stmt->execute([
-            ':id' => $id,
-            ':etudiant_id' => $etudiantId
-        ]);
-        $result = $stmt->fetch();
-        return $result ?: null;
-    }
-
     // Supprimer
     public function supprimer(int $id): bool {
         $stmt = $this->pdo->prepare("DELETE FROM memoire WHERE id_memoire = :id");
@@ -285,79 +70,87 @@ class MemoireDAO
         return $stmt->fetchAll();
     }
 
-    public function listerRejetesParEtudiant(int $etudiantId): array {
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM memoire
-             WHERE etudiant_id = :id AND statut = 'rejete'
-             ORDER BY date_depot DESC"
-        );
-        $stmt->execute([':id' => $etudiantId]);
-        return $stmt->fetchAll();
-    }
-
-    public function mettreAJourVersionCorrigee(
-        int $memoireId,
-        int $etudiantId,
-        string $titre,
-        string $theme,
-        int $anneeSoutenance,
-        string $fichierPdf
-    ): bool {
+    /**
+     * Vérifie si un étudiant a déjà un mémoire pour un type de diplôme donné
+     * Utilisé pour respecter la contrainte UNIQUE(etudiant_id, type_diplome)
+     * définie dans database.sql
+     *
+     * @param int    $etudiantId   id de l'étudiant connecté
+     * @param string $typeDiplome  'licence' ou 'master'
+     * @return array|null          le mémoire existant, ou null
+     */
+    public function trouverParEtudiantEtType(int $etudiantId, string $typeDiplome): ?array
+    {
         $sql = "
-            UPDATE memoire
-            SET
-                titre = :titre,
-                theme = :theme,
-                annee_soutenance = :annee_soutenance,
-                fichier_pdf = :fichier_pdf,
-                statut = 'en_attente',
-                remarques = '',
-                professeur_id = NULL,
-                date_depot = CURRENT_TIMESTAMP
-            WHERE id_memoire = :id
-              AND etudiant_id = :etudiant_id
-              AND statut = 'rejete'
+            SELECT *
+            FROM memoire
+            WHERE etudiant_id  = :etudiant_id
+              AND type_diplome  = :type_diplome
+            LIMIT 1
         ";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
-            ':titre' => $titre,
-            ':theme' => $theme,
-            ':annee_soutenance' => $anneeSoutenance,
-            ':fichier_pdf' => $fichierPdf,
-            ':id' => $memoireId,
-            ':etudiant_id' => $etudiantId
+            ':etudiant_id'  => $etudiantId,
+            ':type_diplome' => $typeDiplome,
         ]);
 
-        return $stmt->rowCount() > 0;
-    }
-
-    // Vérifier si un étudiant a déjà un mémoire du même type
-    public function existeMemoireParTypeDiplome(int $etudiantId, string $typeDiplome): bool {
-        $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) as count FROM memoire 
-             WHERE etudiant_id = :etudiant_id AND type_diplome = :type_diplome"
-        );
-        $stmt->execute([
-            ':etudiant_id' => $etudiantId,
-            ':type_diplome' => $typeDiplome
-        ]);
-        $result = $stmt->fetch();
-        return ($result['count'] ?? 0) > 0;
-    }
-
-    // Trouver le mémoire d'un étudiant par type de diplôme
-    public function trouverParEtudiantEtType(int $etudiantId, string $typeDiplome): ?array {
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM memoire 
-             WHERE etudiant_id = :etudiant_id AND type_diplome = :type_diplome 
-             LIMIT 1"
-        );
-        $stmt->execute([
-            ':etudiant_id' => $etudiantId,
-            ':type_diplome' => $typeDiplome
-        ]);
-        $result = $stmt->fetch();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ?: null;
+    }
+
+    /**
+     * Met à jour les champs modifiables d'un mémoire
+     * Seuls les champs présents dans $data sont mis à jour
+     * Utilisé par EtudiantController action=modifier_memoire
+     *
+     * @param int   $id    id_memoire
+     * @param array $data  clés : titre, theme, annee_soutenance, statut, fichier_pdf (optionnel)
+     * @return bool
+     */
+    public function modifierMemoire(int $id, array $data): bool
+    {
+        // Construire dynamiquement la liste SET selon les clés fournies
+        // Les colonnes autorisées — jamais de champ arbitraire depuis POST
+        $colonnesAutorisees = [
+            'titre', 'theme', 'annee_soutenance',
+            'statut', 'fichier_pdf', 'remarques', 'professeur_id'
+        ];
+
+        $setClauses = [];
+        $params     = [':id' => $id];
+
+        foreach ($data as $colonne => $valeur) {
+            if (!in_array($colonne, $colonnesAutorisees)) {
+                continue; // ignorer toute colonne non autorisée
+            }
+            $setClauses[]         = "$colonne = :$colonne";
+            $params[":$colonne"]  = $valeur;
+        }
+
+        if (empty($setClauses)) {
+            return false; // rien à mettre à jour
+        }
+
+        $sql = "UPDATE memoire SET " . implode(', ', $setClauses) . " WHERE id_memoire = :id";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute($params);
+    }
+
+    /**
+     * Compte les mémoires d'un étudiant
+     * Affiché dans les cartes statistiques du dashboard étudiant
+     *
+     * @param int $etudiantId
+     * @return int
+     */
+    public function compterParEtudiant(int $etudiantId): int
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM memoire WHERE etudiant_id = :id"
+        );
+        $stmt->execute([':id' => $etudiantId]);
+        return (int) $stmt->fetchColumn();
     }
 }

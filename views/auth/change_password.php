@@ -1,6 +1,5 @@
 <?php
-
-// Rôle : forcer l'utilisateur à choisir son propre mot de passe  avant d'accéder à son espace
+// Rôle : forcer l'utilisateur à choisir son propre mot de passe avant d'accéder à son espace
 
 $pageTitle = 'Changer mon mot de passe — UATM GASA Formation';
 

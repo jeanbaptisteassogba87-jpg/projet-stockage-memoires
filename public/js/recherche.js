@@ -1,132 +1,241 @@
-document.addEventListener('DOMContentLoaded', function () {
+// Rôle : interactions de la page rechercher.php
+//        - soumission du formulaire sur changement des filtres
+//        - mise en évidence des mots-clés dans les résultats
+//        - gestion du like sans rechargement complet (fetch)
+//        - mémorisation des filtres dans l'URL
 
-    // ── Éléments du DOM 
-    const champMotCle   = document.getElementById('mot_cle');
-    const listeSugg     = document.getElementById('suggestions');
-    const selectFiliere = document.getElementById('filiere');
-    const selectNiveau  = document.getElementById('niveau');
-    const selectAnnee   = document.getElementById('annee');
-    const formRecherche = document.getElementById('formRecherche');
-    const listeMemoires = document.getElementById('listeMemoires');
 
-    const DELAI_MS = 300;  
-    let   timer    = null;
+(function () {
+  'use strict';
 
-    // ── 1. SUGGESTIONS DYNAMIQUES 
+  document.addEventListener('DOMContentLoaded', function () {
+    initFiltresAuto();
+    initSurlignage();
+    initLikeAjax();
+    initVideRecherche();
+  });
 
-    if (champMotCle && listeSugg) {
 
-        champMotCle.addEventListener('input', function () {
-            clearTimeout(timer);
-            const val = this.value.trim();
+  // ── Filtres auto-soumis au changement ────────────────────────
+  // Les selects type / année / filière soumettent le formulaire immédiatement
+  // L'input texte attend que l'utilisateur appuie sur Entrée ou clique Rechercher
 
-            if (val.length < 2) { cacherSugg(); return; }
+  function initFiltresAuto() {
+    var form    = document.getElementById('form-recherche');
+    var selects = document.querySelectorAll('#form-recherche select[name]');
 
-            timer = setTimeout(() => fetchSugg(val), DELAI_MS);
-        });
+    if (!form) return;
 
-        function fetchSugg(terme) {
-            const url = `/views/commentateur/dashboard.php?action=suggestions&q=${encodeURIComponent(terme)}`;
-
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(r => r.ok ? r.json() : Promise.reject())
-            .then(data => afficherSugg(data))
-            .catch(() => cacherSugg());
-        }
-
-        function afficherSugg(titres) {
-            listeSugg.innerHTML = '';
-
-            if (!titres || titres.length === 0) { cacherSugg(); return; }
-
-            titres.slice(0, 8).forEach(titre => {
-                const li    = document.createElement('li');
-                li.className = 'list-group-item list-group-item-action';
-                li.style.cursor = 'pointer';
-
-                // Met en gras la partie saisie
-                const re = new RegExp(`(${escReg(champMotCle.value.trim())})`, 'gi');
-                li.innerHTML = htmlEsc(titre).replace(re, '<strong>$1</strong>');
-
-                li.addEventListener('mousedown', e => {
-                    e.preventDefault();
-                    champMotCle.value = titre;
-                    cacherSugg();
-                    formRecherche.submit();
-                });
-
-                listeSugg.appendChild(li);
-            });
-
-            listeSugg.classList.remove('d-none');
-        }
-
-        function cacherSugg() {
-            listeSugg.innerHTML = '';
-            listeSugg.classList.add('d-none');
-        }
-
-        // Ferme au clic extérieur
-        document.addEventListener('click', e => {
-            if (e.target !== champMotCle) cacherSugg();
-        });
-
-        // Ferme à Échap
-        champMotCle.addEventListener('keydown', e => {
-            if (e.key === 'Escape') cacherSugg();
-        });
-    }
-
-    // ── 2. SOUMISSION AUTO SUR CHANGEMENT DE FILTRE 
-
-    [selectFiliere, selectNiveau, selectAnnee].forEach(sel => {
-        if (sel) sel.addEventListener('change', () => formRecherche.submit());
+    selects.forEach(function (select) {
+      select.addEventListener('change', function () {
+        form.submit();
+      });
     });
+  }
 
-    // ── 3. MISE EN ÉVIDENCE DES MOTS-CLÉS 
 
-    if (listeMemoires && champMotCle && champMotCle.value.trim().length > 0) {
-        const terme = champMotCle.value.trim();
-        const re    = new RegExp(`(${escReg(terme)})`, 'gi');
+  // ── Surlignage des mots-clés dans les résultats ─────────────
+  // Surligne les termes recherchés dans les titres et thèmes des cartes
 
-        listeMemoires
-            .querySelectorAll('.card-title, .card-text')
-            .forEach(el => {
-                el.innerHTML = el.innerHTML.replace(
-                    re,
-                    '<mark class="bg-warning px-0">$1</mark>'
-                );
-            });
-    }
+  function initSurlignage() {
+    var params    = new URLSearchParams(window.location.search);
+    var motsCles  = (params.get('q') || '').trim();
 
-    // ── 4. ANIMATION D'ENTRÉE DES CARTES 
+    if (!motsCles) return;
 
-    document.querySelectorAll('.carte-memoire').forEach((c, i) => {
-        c.style.opacity   = '0';
-        c.style.transform = 'translateY(16px)';
-        c.style.transition = 'opacity .3s ease, transform .3s ease';
-        setTimeout(() => {
-            c.style.opacity   = '1';
-            c.style.transform = 'translateY(0)';
-        }, i * 70);
+    // Construire une regex sûre à partir des mots-clés
+    var termes = motsCles.split(/\s+/).filter(Boolean);
+    if (!termes.length) return;
+
+    var pattern = new RegExp(
+      '(' + termes.map(echapperRegex).join('|') + ')',
+      'gi'
+    );
+
+    // Cibler uniquement les titres et thèmes des cartes résultats
+    var cibles = document.querySelectorAll('.card h6, .card p');
+
+    cibles.forEach(function (el) {
+      // Ne pas traiter les éléments qui contiennent des enfants HTML complexes
+      if (el.children.length > 0) return;
+
+      var texte = el.textContent;
+      if (!pattern.test(texte)) return;
+
+      // Réinitialiser lastIndex après le test()
+      pattern.lastIndex = 0;
+
+      el.innerHTML = texte.replace(pattern, function (match) {
+        return '<mark style="background:#FFF3CD;padding:0 2px;border-radius:2px">' +
+               escapeHtml(match) +
+               '</mark>';
+      });
     });
+  }
 
-    // ── UTILITAIRES 
 
-    /** Échappe les caractères spéciaux RegExp */
-    function escReg(s) {
-        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // ── Like sans rechargement (fetch) ──────────────────────────
+  // Intercepte les formulaires de like et les envoie en AJAX
+  // Met à jour le compteur et l'icône sans recharger la page
+
+  function initLikeAjax() {
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+
+      // Ne traiter que les formulaires de like
+      var actionInput = form.querySelector('input[name="action"]');
+      if (!actionInput || actionInput.value !== 'toggler_like') return;
+
+      e.preventDefault();
+
+      var btn       = form.querySelector('button[type="submit"]');
+      var memoireId = form.querySelector('input[name="memoire_id"]')?.value;
+
+      if (!memoireId || !btn) return;
+
+      // Désactiver pendant la requête pour éviter les doubles clics
+      btn.disabled = true;
+
+      var body = new FormData(form);
+
+      fetch(form.action, {
+        method:      'POST',
+        body:        body,
+        redirect:    'follow',
+        credentials: 'same-origin',
+      })
+      .then(function () {
+        // Recharger uniquement la section likes de la page courante
+        actualiserLike(btn, memoireId);
+      })
+      .catch(function () {
+        // En cas d'erreur réseau, soumettre normalement
+        btn.disabled = false;
+        form.submit();
+      });
+    });
+  }
+
+  /**
+   * Met à jour visuellement le bouton like et le compteur
+   * après une réponse AJAX réussie
+   *
+   * @param {HTMLElement} btn        le bouton like cliqué
+   * @param {string}      memoireId  l'id du mémoire
+   */
+  function actualiserLike(btn, memoireId) {
+    // Déterminer l'état actuel depuis les classes CSS
+    var estLike = btn.classList.contains('btn-danger');
+
+    // Basculer l'état
+    if (estLike) {
+      // Retirer le like
+      btn.classList.remove('btn-danger');
+      btn.classList.add('btn-outline-danger');
+      btn.innerHTML = '<i class="bi bi-heart me-1"></i>J\'aime';
+    } else {
+      // Ajouter le like
+      btn.classList.remove('btn-outline-danger');
+      btn.classList.add('btn-danger');
+      btn.innerHTML = '<i class="bi bi-heart-fill me-1"></i>Je n\'aime plus';
     }
 
-    /** Échappe le HTML pour l'affichage dans innerHTML */
-    function htmlEsc(s) {
-        return s
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+    // Mettre à jour les compteurs affichés (icône + chiffre)
+    actualiserCompteurLike(memoireId, estLike ? -1 : 1);
+
+    // Animation légère sur le bouton
+    btn.style.transform = 'scale(1.15)';
+    setTimeout(function () {
+      btn.style.transform = '';
+      btn.disabled = false;
+    }, 180);
+  }
+
+  /**
+   * Incrémente ou décrémente le compteur de likes visible
+   * Fonctionne sur la page résultats (cartes) et la page détail
+   *
+   * @param {string} memoireId
+   * @param {number} delta  +1 ou -1
+   */
+  function actualiserCompteurLike(memoireId, delta) {
+    // Page détail : un seul élément #nb-likes
+    var spanDetail = document.getElementById('nb-likes');
+    if (spanDetail) {
+      var valeur = parseInt(spanDetail.textContent, 10) || 0;
+      spanDetail.textContent = Math.max(0, valeur + delta);
     }
 
-});
+    // Page résultats : chercher par attribut data-memoire
+    var spanCarte = document.querySelector('[data-likes="' + memoireId + '"]');
+    if (spanCarte) {
+      var v = parseInt(spanCarte.textContent, 10) || 0;
+      spanCarte.textContent = Math.max(0, v + delta);
+    }
+  }
+
+
+  // ── Bouton vider la recherche ────────────────────────────────
+  // Affiche un × à droite de l'input texte quand il contient du texte
+
+  function initVideRecherche() {
+    var input = document.querySelector('#form-recherche input[name="q"]');
+    if (!input) return;
+
+    // Créer le bouton ×
+    var btnVider = document.createElement('button');
+    btnVider.type      = 'button';
+    btnVider.innerHTML = '&times;';
+    btnVider.title     = 'Vider la recherche';
+    btnVider.style.cssText = [
+      'position:absolute',
+      'right:110px',
+      'top:50%',
+      'transform:translateY(-50%)',
+      'background:none',
+      'border:none',
+      'font-size:1.2rem',
+      'color:var(--text-muted)',
+      'cursor:pointer',
+      'padding:0 8px',
+      'line-height:1',
+      'display:none',
+    ].join(';');
+
+    // Positionner le parent en relatif pour l'absolu
+    var groupe = input.closest('.input-group');
+    if (groupe) {
+      groupe.style.position = 'relative';
+      groupe.appendChild(btnVider);
+    }
+
+    function majVisibilite() {
+      btnVider.style.display = input.value.trim() ? 'block' : 'none';
+    }
+
+    input.addEventListener('input', majVisibilite);
+    majVisibilite();
+
+    btnVider.addEventListener('click', function () {
+      input.value = '';
+      majVisibilite();
+      input.focus();
+    });
+  }
+
+
+  // ── Utilitaires ──────────────────────────────────────────────
+
+  function echapperRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+})();

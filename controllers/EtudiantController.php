@@ -1,315 +1,222 @@
 <?php
 
+
+// Rôle : point d'entrée POST pour toutes les actions étudiant
+// action=deposer_memoire  → upload PDF + insertion BDD
+// action=modifier_memoire → remplacement PDF + update BDD
+
+
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../dao/MemoireDAO.php';
 require_once __DIR__ . '/../dao/EtudiantDAO.php';
 require_once __DIR__ . '/../models/Memoire.php';
-require_once __DIR__ . '/../config/session.php';
-require_once __DIR__ . '/../config/constants.php';
 
-class EtudiantController {
-    
-    private MemoireDAO $memoireDAO;
-    private EtudiantDAO $etudiantDAO;
-
-    public function __construct() {
-        $this->memoireDAO = new MemoireDAO();
-        $this->etudiantDAO = new EtudiantDAO();
-    }
-
-    /**
-     * Ajouter un nouveau mémoire
-     * POST: titre, theme, type_diplome, annee_soutenance, fichier_pdf
-     */
-    public function ajouterMemoire(): void {
-        requireRole(ROLE_ETUDIANT);
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: /views/etudiant/deposer_memoire.php');
-            exit;
-        }
-
-        $profilEtudiant = $this->etudiantDAO->trouverProfilParUtilisateurId((int)$_SESSION['user_id']);
-
-        if (!$profilEtudiant || !$this->etudiantDAO->peutDeposer((int)$_SESSION['user_id'])) {
-            $_SESSION['upload_errors'] = [
-                'Vous n\'etes pas autorise a deposer un memoire. Seuls les etudiants L3, M2 ou diplomes permanents peuvent le faire.'
-            ];
-            header('Location: /views/etudiant/deposer_memoire.php');
-            exit;
-        }
-
-        // Récupérer et valider les données
-        $titre = trim($_POST['titre'] ?? '');
-        $theme = trim($_POST['theme'] ?? '');
-        $typeDiplome = trim($_POST['type_diplome'] ?? '');
-        $anneeSoutenance = (int)($_POST['annee_soutenance'] ?? 0);
-
-        // Validations basiques
-        $erreurs = [];
-
-        if (empty($titre) || strlen($titre) < 5) {
-            $erreurs[] = 'Le titre doit contenir au moins 5 caractères';
-        }
-
-        if (empty($theme) || strlen($theme) < 5) {
-            $erreurs[] = 'Le thème doit contenir au moins 5 caractères';
-        }
-
-        if (!in_array($typeDiplome, [DIPLOME_LICENCE, DIPLOME_MASTER])) {
-            $erreurs[] = 'Type de diplôme invalide';
-        }
-
-        if (!empty($typeDiplome) && !(bool)$profilEtudiant['est_diplome_permanent']) {
-            $niveauEtude = $profilEtudiant['niveau_etude'];
-
-            if ($niveauEtude === 'L3' && $typeDiplome !== DIPLOME_LICENCE) {
-                $erreurs[] = 'Un etudiant L3 ne peut deposer qu\'un memoire de Licence';
-            }
-
-            if ($niveauEtude === 'M2' && $typeDiplome !== DIPLOME_MASTER) {
-                $erreurs[] = 'Un etudiant M2 ne peut deposer qu\'un memoire de Master';
-            }
-        }
-
-        $anneeActuelle = (int)date('Y');
-        if ($anneeSoutenance < 2000 || $anneeSoutenance > $anneeActuelle + 1) {
-            $erreurs[] = 'Année de soutenance invalide';
-        }
-
-        // Vérifier si l'étudiant a déjà un mémoire de ce type
-        if (!empty($typeDiplome) && $this->memoireDAO->existeMemoireParTypeDiplome($_SESSION['user_id'], $typeDiplome)) {
-            $erreurs[] = 'Vous avez déjà un mémoire pour ce type de diplôme. Un étudiant ne peut déposer qu\'un seul mémoire par type.';
-        }
-
-        // Vérifier le fichier PDF
-        if (!isset($_FILES['fichier_pdf']) || $_FILES['fichier_pdf']['error'] !== UPLOAD_ERR_OK) {
-            $erreurs[] = 'Erreur lors du téléchargement du fichier PDF';
-        } else {
-            $file = $_FILES['fichier_pdf'];
-            
-            // Vérifier l'extension
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if ($ext !== 'pdf') {
-                $erreurs[] = 'Seuls les fichiers PDF sont acceptés';
-            }
-
-            // Vérifier la taille
-            if ($file['size'] > MAX_PDF_SIZE) {
-                $erreurs[] = 'Le fichier dépasse la taille maximale de ' . (MAX_PDF_SIZE / (1024 * 1024)) . ' Mo';
-            }
-
-            // Vérifier le type MIME
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-            
-            if ($mime !== 'application/pdf') {
-                $erreurs[] = 'Le fichier n\'est pas un PDF valide';
-            }
-        }
-
-        // S'il y a des erreurs, retourner à la vue
-        if (!empty($erreurs)) {
-            $_SESSION['upload_errors'] = $erreurs;
-            $_SESSION['form_data'] = [
-                'titre' => $titre,
-                'theme' => $theme,
-                'type_diplome' => $typeDiplome,
-                'annee_soutenance' => $anneeSoutenance
-            ];
-            header('Location: /views/etudiant/deposer_memoire.php');
-            exit;
-        }
-
-        // Créer le répertoire s'il n'existe pas
-        if (!is_dir(PDF_STORAGE_PATH)) {
-            mkdir(PDF_STORAGE_PATH, 0755, true);
-        }
-
-        // Générer un nom de fichier unique
-        $nomFichier = 'memoire_' . $_SESSION['user_id'] . '_' . time() . '.pdf';
-        $cheminFichier = PDF_STORAGE_PATH . $nomFichier;
-
-        // Déplacer le fichier uploadé
-        if (!move_uploaded_file($_FILES['fichier_pdf']['tmp_name'], $cheminFichier)) {
-            $_SESSION['upload_errors'] = ['Erreur lors de la sauvegarde du fichier'];
-            header('Location: /views/etudiant/deposer_memoire.php');
-            exit;
-        }
-
-        // Créer l'objet Memoire
-        $memoire = new Memoire();
-        $memoire->setEtudiantId($_SESSION['user_id']);
-        $memoire->setTitre($titre);
-        $memoire->setTheme($theme);
-        $memoire->setFichierPdf($nomFichier);
-        $memoire->setStatut(STATUT_EN_ATTENTE);
-        $memoire->setTypeDiplome($typeDiplome);
-        $memoire->setAnneeSoutenance($anneeSoutenance);
-        $memoire->setRemarques('');
-
-        // Insérer en base de données
-        try {
-            if ($this->memoireDAO->ajouterMemoire($memoire)) {
-                // Nettoyer les données de session
-                unset($_SESSION['upload_errors']);
-                unset($_SESSION['form_data']);
-                
-                $_SESSION['success_message'] = 'Votre memoire a ete depose avec succes. En attente de verification.';
-                header('Location: /views/etudiant/dashboard.php');
-                exit;
-            } else {
-                // Supprimer le fichier uploadé en cas d'erreur
-                unlink($cheminFichier);
-                $_SESSION['upload_errors'] = ['Erreur lors de l\'enregistrement du mémoire'];
-                header('Location: /views/etudiant/deposer_memoire.php');
-                exit;
-            }
-        } catch (Exception $e) {
-            // Supprimer le fichier uploadé en cas d'erreur
-            if (file_exists($cheminFichier)) {
-                unlink($cheminFichier);
-            }
-            $_SESSION['upload_errors'] = ['Une erreur est survenue: ' . $e->getMessage()];
-            header('Location: /views/etudiant/deposer_memoire.php');
-            exit;
-        }
-    }
-
-    public function corrigerMemoire(): void {
-        requireRole(ROLE_ETUDIANT);
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: /views/etudiant/modifier_memoire.php');
-            exit;
-        }
-
-        $memoireId = (int)($_POST['memoire_id'] ?? 0);
-        $memoireExistant = $this->memoireDAO->trouverParIdEtEtudiant($memoireId, (int)$_SESSION['user_id']);
-
-        if (!$memoireExistant || $memoireExistant['statut'] !== STATUT_REJETE) {
-            $_SESSION['correction_errors'] = [
-                'Seul un memoire rejete vous appartenant peut etre corrige.'
-            ];
-            header('Location: /views/etudiant/modifier_memoire.php');
-            exit;
-        }
-
-        $titre = trim($_POST['titre'] ?? '');
-        $theme = trim($_POST['theme'] ?? '');
-        $anneeSoutenance = (int)($_POST['annee_soutenance'] ?? 0);
-        $erreurs = [];
-
-        if (empty($titre) || strlen($titre) < 5) {
-            $erreurs[] = 'Le titre doit contenir au moins 5 caracteres';
-        }
-
-        if (empty($theme) || strlen($theme) < 5) {
-            $erreurs[] = 'Le theme doit contenir au moins 5 caracteres';
-        }
-
-        $anneeActuelle = (int)date('Y');
-        if ($anneeSoutenance < 2000 || $anneeSoutenance > $anneeActuelle + 1) {
-            $erreurs[] = 'Annee de soutenance invalide';
-        }
-
-        if (!isset($_FILES['fichier_pdf']) || $_FILES['fichier_pdf']['error'] !== UPLOAD_ERR_OK) {
-            $erreurs[] = 'Veuillez uploader la version corrigee du memoire en PDF';
-        } else {
-            $file = $_FILES['fichier_pdf'];
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-            if ($ext !== 'pdf') {
-                $erreurs[] = 'Seuls les fichiers PDF sont acceptes';
-            }
-
-            if ($file['size'] > MAX_PDF_SIZE) {
-                $erreurs[] = 'Le fichier depasse la taille maximale de ' . (MAX_PDF_SIZE / (1024 * 1024)) . ' Mo';
-            }
-
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-
-            if ($mime !== 'application/pdf') {
-                $erreurs[] = 'Le fichier n\'est pas un PDF valide';
-            }
-        }
-
-        if (!empty($erreurs)) {
-            $_SESSION['correction_errors'] = $erreurs;
-            $_SESSION['correction_form_data'] = [
-                'memoire_id' => $memoireId,
-                'titre' => $titre,
-                'theme' => $theme,
-                'annee_soutenance' => $anneeSoutenance
-            ];
-            header('Location: /views/etudiant/modifier_memoire.php?id=' . $memoireId);
-            exit;
-        }
-
-        if (!is_dir(PDF_STORAGE_PATH)) {
-            mkdir(PDF_STORAGE_PATH, 0755, true);
-        }
-
-        $nomFichier = 'memoire_' . $_SESSION['user_id'] . '_' . time() . '_corrige.pdf';
-        $cheminFichier = PDF_STORAGE_PATH . $nomFichier;
-
-        if (!move_uploaded_file($_FILES['fichier_pdf']['tmp_name'], $cheminFichier)) {
-            $_SESSION['correction_errors'] = ['Erreur lors de la sauvegarde du fichier corrige'];
-            header('Location: /views/etudiant/modifier_memoire.php?id=' . $memoireId);
-            exit;
-        }
-
-        try {
-            $corrige = $this->memoireDAO->mettreAJourVersionCorrigee(
-                $memoireId,
-                (int)$_SESSION['user_id'],
-                $titre,
-                $theme,
-                $anneeSoutenance,
-                $nomFichier
-            );
-
-            if (!$corrige) {
-                if (file_exists($cheminFichier)) {
-                    unlink($cheminFichier);
-                }
-                $_SESSION['correction_errors'] = ['Erreur lors de l\'enregistrement de la correction'];
-                header('Location: /views/etudiant/modifier_memoire.php?id=' . $memoireId);
-                exit;
-            }
-
-            $ancienFichier = PDF_STORAGE_PATH . $memoireExistant['fichier_pdf'];
-            if (is_file($ancienFichier) && $ancienFichier !== $cheminFichier) {
-                unlink($ancienFichier);
-            }
-
-            unset($_SESSION['correction_errors'], $_SESSION['correction_form_data']);
-            $_SESSION['success_message'] = 'Votre version corrigee a ete envoyee. Le memoire repasse en attente de validation.';
-            header('Location: /views/etudiant/dashboard.php');
-            exit;
-        } catch (Exception $e) {
-            if (file_exists($cheminFichier)) {
-                unlink($cheminFichier);
-            }
-            $_SESSION['correction_errors'] = ['Une erreur est survenue: ' . $e->getMessage()];
-            header('Location: /views/etudiant/modifier_memoire.php?id=' . $memoireId);
-            exit;
-        }
-    }
+// Seules les requêtes POST sont traitées ici
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: /views/etudiant/dashboard.php');
+    exit;
 }
 
-// Traiter la requête
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $controller = new EtudiantController();
-    $action = $_POST['action'] ?? '';
+// L'utilisateur doit être connecté et avoir le rôle étudiant
+requireRole(ROLE_ETUDIANT);
 
-    if ($action === 'ajouter_memoire') {
-        $controller->ajouterMemoire();
+$action = $_POST['action'] ?? '';
+
+
+// ACTION : déposer un mémoire
+
+if ($action === 'deposer_memoire') {
+
+    // --- 1. Récupération et nettoyage des champs texte ------
+    $titre           = trim($_POST['titre']            ?? '');
+    $theme           = trim($_POST['theme']            ?? '');
+    $type_diplome    = trim($_POST['type_diplome']     ?? '');
+    $annee           = (int) ($_POST['annee_soutenance'] ?? 0);
+
+    // --- 2. Validation des champs obligatoires --------------
+    if (empty($titre) || empty($theme) || empty($type_diplome) || $annee < 2000) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=champs_vides');
+        exit;
     }
 
-    if ($action === 'corriger_memoire') {
-        $controller->corrigerMemoire();
+    // type_diplome doit être licence ou master (valeurs de constants.php)
+    if (!in_array($type_diplome, [DIPLOME_LICENCE, DIPLOME_MASTER])) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=type_invalide');
+        exit;
     }
+
+    // --- 3. Vérifier que l'étudiant a le niveau requis ------
+    // On relit le niveau depuis la BDD (jamais faire confiance à la session seule)
+    $etudiantDAO = new EtudiantDAO();
+    $etudiant    = $etudiantDAO->trouverParId((int) $_SESSION['user_id']);
+
+    if (!$etudiant || !in_array($etudiant['niveau_etude'], NIVEAUX_DEPOT)) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=niveau_insuffisant');
+        exit;
+    }
+
+    // --- 4. Vérifier l'unicité (un seul mémoire par type de diplôme) ---
+    $memoireDAO = new MemoireDAO();
+    $existant   = $memoireDAO->trouverParEtudiantEtType(
+        (int) $_SESSION['user_id'],
+        $type_diplome
+    );
+
+    if ($existant) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=doublon');
+        exit;
+    }
+
+    // --- 5. Validation du fichier PDF -----------------------
+    $fichier = $_FILES['fichier_pdf'] ?? null;
+
+    if (!$fichier || $fichier['error'] !== UPLOAD_ERR_OK) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=fichier_manquant');
+        exit;
+    }
+
+    // Vérifier le type MIME réel (pas juste l'extension)
+    $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_file($finfo, $fichier['tmp_name']);
+    finfo_close($finfo);
+
+    if ($mimeType !== 'application/pdf') {
+        header('Location: /views/etudiant/deposer_memoire.php?error=pas_pdf');
+        exit;
+    }
+
+    // Vérifier la taille (MAX_PDF_SIZE défini dans constants.php = 10 Mo)
+    if ($fichier['size'] > MAX_PDF_SIZE) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=trop_lourd');
+        exit;
+    }
+
+    // --- 6. Déplacer le fichier dans le dossier de stockage ---
+    // Le dossier uploads/ est hors webroot (cf. uploads/.htaccess Deny from all)
+    // Le nom du fichier = prefixe unique + extension .pdf
+    $nomFichier  = uniqid('mem_', true) . '.pdf';
+    $destination = PDF_STORAGE_PATH . $nomFichier;   // défini dans constants.php
+
+    if (!move_uploaded_file($fichier['tmp_name'], $destination)) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=upload_echec');
+        exit;
+    }
+
+    // --- 7. Construire l'objet Memoire et insérer -----------
+    $memoire = new Memoire();
+    $memoire->setEtudiantId((int) $_SESSION['user_id']);
+    $memoire->setTitre($titre);
+    $memoire->setTheme($theme);
+    $memoire->setFichierPdf($nomFichier);
+    $memoire->setStatut(STATUT_EN_ATTENTE);     // toujours en_attente à la création
+    $memoire->setTypeDiplome($type_diplome);
+    $memoire->setAnneeSoutenance($annee);
+    $memoire->setRemarques('');                 // pas encore de remarques
+
+    $ok = $memoireDAO->ajouterMemoire($memoire);
+
+    if (!$ok) {
+        // Si l'insertion BDD échoue, supprimer le fichier déjà uploadé
+        @unlink($destination);
+        header('Location: /views/etudiant/deposer_memoire.php?error=bdd');
+        exit;
+    }
+
+    // --- 8. Succès → retour au dashboard -------------------
+    header('Location: /views/etudiant/dashboard.php?success=depot_ok');
+    exit;
 }
+
+
+// ACTION : modifier un mémoire existant
+// Autorisé uniquement si statut = en_attente ou rejete
+
+if ($action === 'modifier_memoire') {
+
+    $id_memoire   = (int) ($_POST['id_memoire']        ?? 0);
+    $titre        = trim($_POST['titre']               ?? '');
+    $theme        = trim($_POST['theme']               ?? '');
+    $annee        = (int) ($_POST['annee_soutenance']  ?? 0);
+
+    // --- 1. Charger le mémoire existant et vérifier ownership ---
+    $memoireDAO = new MemoireDAO();
+    $memoire    = $memoireDAO->trouverParId($id_memoire);
+
+    if (!$memoire || (int) $memoire['etudiant_id'] !== (int) $_SESSION['user_id']) {
+        header('Location: /views/etudiant/dashboard.php?error=non_autorise');
+        exit;
+    }
+
+    // --- 2. Vérifier que le statut autorise la modification ---
+    $statutsModifiables = [STATUT_EN_ATTENTE, STATUT_REJETE];
+    if (!in_array($memoire['statut'], $statutsModifiables)) {
+        header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=statut_bloque');
+        exit;
+    }
+
+    // --- 3. Validation des champs ---
+    if (empty($titre) || empty($theme) || $annee < 2000) {
+        header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=champs_vides');
+        exit;
+    }
+
+    // --- 4. Préparer les données à mettre à jour ---
+    $data = [
+        'titre'            => $titre,
+        'theme'            => $theme,
+        'annee_soutenance' => $annee,
+        'statut'           => STATUT_EN_ATTENTE, // repasse en attente après modification
+    ];
+
+    // --- 5. Si un nouveau PDF est fourni, le remplacer ---
+    if (isset($_FILES['fichier_pdf']) && $_FILES['fichier_pdf']['error'] === UPLOAD_ERR_OK) {
+
+        $fichier = $_FILES['fichier_pdf'];
+
+        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $fichier['tmp_name']);
+        finfo_close($finfo);
+
+        if ($mimeType !== 'application/pdf') {
+            header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=pas_pdf');
+            exit;
+        }
+
+        if ($fichier['size'] > MAX_PDF_SIZE) {
+            header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=trop_lourd');
+            exit;
+        }
+
+        $nomFichier  = uniqid('mem_', true) . '.pdf';
+        $destination = PDF_STORAGE_PATH . $nomFichier;
+
+        if (!move_uploaded_file($fichier['tmp_name'], $destination)) {
+            header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=upload_echec');
+            exit;
+        }
+
+        // Supprimer l'ancien fichier PDF du serveur
+        $ancienFichier = PDF_STORAGE_PATH . $memoire['fichier_pdf'];
+        if (file_exists($ancienFichier)) {
+            @unlink($ancienFichier);
+        }
+
+        $data['fichier_pdf'] = $nomFichier;
+    }
+
+    // --- 6. Mettre à jour en BDD ---
+    $ok = $memoireDAO->modifierMemoire($id_memoire, $data);
+
+    if (!$ok) {
+        header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=bdd');
+        exit;
+    }
+
+    header('Location: /views/etudiant/dashboard.php?success=modif_ok');
+    exit;
+}
+
+// Si action inconnue → retour dashboard
+header('Location: /views/etudiant/dashboard.php');
+exit;
