@@ -2,10 +2,9 @@
 
 // Rôle : page de consultation détaillée d'un mémoire publié
 //        - infos complètes du mémoire
-//        - visionneuse PDF intégrée
+//        - visionneuse PDF intégrée (PDF.js pour les non-auteurs)
 //        - bouton like / unlike
 //        - section commentaires (ajouter + liste)
-
 
 $pageTitle = 'Consulter un mémoire — UATM GASA Formation';
 
@@ -52,6 +51,11 @@ $successMsg = !empty($_GET['success']) ? ($successMessages[$_GET['success']] ?? 
 $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']]   ?? '') : '';
 
 $role = $_SESSION['user_role'];
+
+// Déterminer si l'utilisateur est l'auteur ou le binôme
+$estAuteur  = (isset($memoire['id_etudiant']) && (int) $memoire['id_etudiant'] === $userId);
+$estBinome  = (isset($memoire['etudiant2_id']) && (int) $memoire['etudiant2_id'] === $userId);
+$estProprio = $estAuteur || $estBinome;
 ?>
 <?php require_once __DIR__ . '/../layout/header.php'; ?>
 <?php require_once __DIR__ . '/../layout/navbar.php'; ?>
@@ -281,7 +285,7 @@ $role = $_SESSION['user_role'];
                                       style="padding:0 4px;color:var(--text-muted);
                                              background:none;border:none"
                                       title="Supprimer"
-                                      data-confirm="Supprimer ce commentaire ?">
+                                      onclick="return confirm('Supprimer ce commentaire ?')">
                                 <i class="bi bi-trash3" style="font-size:0.8rem"></i>
                               </button>
                             </form>
@@ -315,29 +319,107 @@ $role = $_SESSION['user_role'];
                 <i class="bi bi-file-earmark-pdf me-2"></i>
                 <?= htmlspecialchars(mb_substr($memoire['titre'], 0, 50)) ?>
               </span>
-              <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                 target="_blank"
-                 class="btn btn-sm"
-                 style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:0.8rem">
-                <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir
-              </a>
+              <?php if ($estProprio): ?>
+                <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>&action=telecharger"
+                   class="btn btn-success btn-sm"
+                   download>
+                  <i class="bi bi-download me-1"></i> Télécharger
+                </a>
+              <?php endif; ?>
             </div>
             <div class="card-body p-2">
-              <div id="pdf-container">
+              <?php if ($estProprio): ?>
+                <!-- Visionneuse avec iframe (l'auteur peut voir normalement) -->
                 <iframe
                   src="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
                   width="100%"
                   height="750px"
                   style="border:none;border-radius:var(--radius)">
-                  <p style="color:#fff;padding:20px">
-                    Votre navigateur ne supporte pas l'affichage intégré.
-                    <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                       style="color:var(--secondary)">
-                      Télécharger le mémoire
-                    </a>
-                  </p>
+                  <p>Votre navigateur ne supporte pas l'affichage intégré.</p>
                 </iframe>
-              </div>
+              <?php else: ?>
+                <!-- Visionneuse PDF.js sans téléchargement ni impression -->
+                <div style="text-align:center; margin-bottom:10px;">
+                  <button id="prev-page" class="btn btn-sm btn-secondary">◀ Précédent</button>
+                  <span id="page-info" class="mx-2">Page 1 / ?</span>
+                  <button id="next-page" class="btn btn-sm btn-secondary">Suivant ▶</button>
+                </div>
+                <canvas id="pdf-canvas" style="width:100%; border:1px solid #ccc; border-radius:8px;"></canvas>
+
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+                <script>
+                  (function() {
+                    const url = "/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>";
+                    let pdfDoc = null;
+                    let pageNum = 1;
+                    let pageRendering = false;
+                    let pageNumPending = null;
+                    const canvas = document.getElementById('pdf-canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+                      pdfDoc = pdfDoc_;
+                      document.getElementById('page-info').textContent = `Page 1 / ${pdfDoc.numPages}`;
+                      renderPage(1);
+                    }).catch(function(err) {
+                      console.error("Erreur chargement PDF:", err);
+                      document.getElementById('pdf-canvas').outerHTML = '<div class="alert alert-danger">Impossible de charger le PDF.</div>';
+                    });
+
+                    function renderPage(num) {
+                      pageRendering = true;
+                      pdfDoc.getPage(num).then(function(page) {
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        const renderContext = { canvasContext: ctx, viewport: viewport };
+                        page.render(renderContext).promise.then(function() {
+                          pageRendering = false;
+                          if (pageNumPending !== null) {
+                            renderPage(pageNumPending);
+                            pageNumPending = null;
+                          }
+                        });
+                      });
+                      document.getElementById('page-info').textContent = `Page ${num} / ${pdfDoc.numPages}`;
+                    }
+
+                    document.getElementById('prev-page').addEventListener('click', function() {
+                      if (pageNum <= 1) return;
+                      pageNum--;
+                      renderPage(pageNum);
+                    });
+
+                    document.getElementById('next-page').addEventListener('click', function() {
+                      if (pageNum >= pdfDoc.numPages) return;
+                      pageNum++;
+                      renderPage(pageNum);
+                    });
+
+                    // Bloquer le clic droit sur le canvas
+                    canvas.addEventListener('contextmenu', function(e) {
+                      e.preventDefault();
+                      return false;
+                    });
+
+                    // Bloquer les raccourcis clavier (Ctrl+S, Ctrl+P, etc.)
+                    document.addEventListener('keydown', function(e) {
+                      if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'S' || e.key === 'P' || e.key === 'U')) {
+                        e.preventDefault();
+                        return false;
+                      }
+                      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+                        e.preventDefault();
+                        return false;
+                      }
+                      if (e.key === 'F12') {
+                        e.preventDefault();
+                        return false;
+                      }
+                    });
+                  })();
+                </script>
+              <?php endif; ?>
             </div>
           </div>
         </div>

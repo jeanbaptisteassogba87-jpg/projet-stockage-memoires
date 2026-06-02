@@ -261,7 +261,7 @@ function getLigneHtml(numero) {
   ) ?>;
 
   let optionsHtml = '<option value="">— Choisir —</option>';
-  options.forEach(function(e) {
+  options.forEach(function(e) {   
     optionsHtml += `<option value="${e.id}">${e.nom}</option>`;
   });
 

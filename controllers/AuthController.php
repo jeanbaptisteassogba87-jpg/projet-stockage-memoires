@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../dao/UtilisateurDAO.php';
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/constants.php';   
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
