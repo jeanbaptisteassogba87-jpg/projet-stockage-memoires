@@ -235,6 +235,13 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                          title="Voir les remarques">
                         <i class="bi bi-chat-text"></i>
                       </a>
+                      <?php if ($m['statut'] === STATUT_PUBLIE): ?>
+                        <a href="/views/commentateur/consulter_memoire.php?id=<?= $m['id_memoire'] ?>"
+                           class="btn btn-sm btn-outline-primary me-1"
+                           title="Voir les commentaires publics">
+                          <i class="bi bi-chat-left-text"></i>
+                        </a>
+                      <?php endif; ?>
                       <!-- Modifier uniquement si statut le permet -->
                       <?php if (in_array($m['statut'], [STATUT_EN_ATTENTE, STATUT_REJETE], true)): ?>
                         <a href="/views/etudiant/modifier_memoire.php?id=<?= $m['id_memoire'] ?>"
