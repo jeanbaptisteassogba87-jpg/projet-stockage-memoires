@@ -229,7 +229,7 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
                     <input type="hidden" name="id_memoire" value="<?= $memoire['id_memoire'] ?>">
                     <button type="submit"
                             class="btn btn-success"
-                            onclick="return confirm('Confirmer la validation de ce mémoire ?')">
+                            data-confirm="Confirmer la validation de ce mémoire ?">
                       <i class="bi bi-check-lg me-1"></i> Valider
                     </button>
                   </form>

@@ -191,7 +191,17 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
               </thead>
               <tbody>
                 <?php foreach ($memoires as $m): ?>
-                  <?php $estBinome = (int) ($m['etudiant2_id'] ?? 0) === (int) $_SESSION['user_id']; ?>
+                  <?php
+                    $estBinome = !empty($m['etudiant2_id']);
+                    $binomeNom = null;
+                    if ($estBinome) {
+                        if ((int) $_SESSION['user_id'] === (int) $m['etudiant_id']) {
+                            $binomeNom = $m['binome_nom'];
+                        } else {
+                            $binomeNom = $m['auteur_nom'];
+                        }
+                    }
+                  ?>
                   <tr>
                     <td>
                       <span title="<?= htmlspecialchars($m['titre']) ?>">
@@ -201,6 +211,11 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                             : $m['titre']
                         ) ?>
                       </span>
+                      <?php if ($binomeNom): ?>
+                        <div class="small text-muted mt-1">
+                          Binôme avec <?= htmlspecialchars($binomeNom) ?>
+                        </div>
+                      <?php endif; ?>
                     </td>
                     <td><?= htmlspecialchars(ucfirst($m['type_diplome'])) ?></td>
                     <td><?= (int) $m['annee_soutenance'] ?></td>
@@ -221,7 +236,7 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                         <i class="bi bi-chat-text"></i>
                       </a>
                       <!-- Modifier uniquement si statut le permet -->
-                      <?php if (in_array($m['statut'], [STATUT_EN_ATTENTE, STATUT_REJETE])): ?>
+                      <?php if (in_array($m['statut'], [STATUT_EN_ATTENTE, STATUT_REJETE], true)): ?>
                         <a href="/views/etudiant/modifier_memoire.php?id=<?= $m['id_memoire'] ?>"
                            class="btn btn-sm btn-uatm"
                            title="Modifier">

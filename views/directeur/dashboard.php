@@ -192,10 +192,14 @@ $aPublier       = array_slice($aPublier, 0, 5); // 5 derniers seulement sur le d
                         <input type="hidden" name="action"     value="publier">
                         <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                         <button type="submit" class="btn btn-sm btn-uatm"
-                                onclick="return confirm('Publier ce mémoire en ligne ?')">
+                                data-confirm="Publier ce mémoire en ligne ?">
                           <i class="bi bi-globe me-1"></i> Publier
                         </button>
                       </form>
+                      <a href="/views/directeur/preview_memoire.php?id=<?= $m['id_memoire'] ?>"
+                         class="btn btn-sm btn-outline-secondary ms-1">
+                        <i class="bi bi-eye me-1"></i> Prévisualiser
+                      </a>
                     </td>
                   </tr>
                 <?php endforeach; ?>

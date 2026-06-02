@@ -44,7 +44,7 @@ if ($action === 'deposer_memoire') {
     }
 
     // type_diplome doit être licence ou master (valeurs de constants.php)
-    if (!in_array($type_diplome, [DIPLOME_LICENCE, DIPLOME_MASTER])) {
+    if (!in_array($type_diplome, [DIPLOME_LICENCE, DIPLOME_MASTER], true)) {
         header('Location: /views/etudiant/deposer_memoire.php?error=type_invalide');
         exit;
     }
@@ -54,8 +54,20 @@ if ($action === 'deposer_memoire') {
     $etudiantDAO = new EtudiantDAO();
     $etudiant    = $etudiantDAO->trouverParId((int) $_SESSION['user_id']);
 
-    if (!$etudiant || !in_array($etudiant['niveau_etude'], NIVEAUX_DEPOT)) {
+    if (!$etudiant || !in_array($etudiant['niveau_etude'], NIVEAUX_DEPOT, true)) {
         header('Location: /views/etudiant/deposer_memoire.php?error=niveau_insuffisant');
+        exit;
+    }
+
+    // --- 3.1 Vérifier la cohérence type/niveau ----------------
+    $typeAutorise = [
+        'L3' => DIPLOME_LICENCE,
+        'M2' => DIPLOME_MASTER,
+    ];
+
+    if (!isset($typeAutorise[$etudiant['niveau_etude']])
+        || $typeAutorise[$etudiant['niveau_etude']] !== $type_diplome) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=type_invalide');
         exit;
     }
 

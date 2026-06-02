@@ -1,1 +1,3 @@
 config/database.php
+.phpunit.result.cache
+vendor/

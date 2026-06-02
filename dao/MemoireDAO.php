@@ -66,12 +66,23 @@ class MemoireDAO {
     // Lister les mémoires d'un étudiant
     public function listerParEtudiant(int $etudiantId): array {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM memoire
-             WHERE etudiant_id = :id OR etudiant2_id = :id
-             ORDER BY date_depot DESC"
+            "SELECT
+                m.*,
+                u.nom AS auteur_nom,
+                u2.nom AS binome_nom,
+                e2.numero_etudiant AS binome_numero,
+                e2.niveau_etude AS binome_niveau,
+                f2.nom_filiere AS binome_filiere
+             FROM memoire m
+             INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
+             LEFT JOIN utilisateur u2 ON u2.id_utilisateur = m.etudiant2_id
+             LEFT JOIN etudiant e2 ON e2.utilisateur_id = u2.id_utilisateur
+             LEFT JOIN filiere f2 ON f2.id_filiere = e2.filiere_id
+             WHERE m.etudiant_id = :id OR m.etudiant2_id = :id
+             ORDER BY m.date_depot DESC"
         );
         $stmt->execute([':id' => $etudiantId]);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
