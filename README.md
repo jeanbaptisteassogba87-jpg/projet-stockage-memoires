@@ -1,65 +1,54 @@
-# Système de Gestion des Mémoires — UATM GASA Formation
+📚 Système de Gestion des Mémoires — UATM GASA Formation
 
-## Stack technique
-- PHP 8+ (orienté objet, sans framework)
-- MySQL 8 / MariaDB
-- Bootstrap 5
-- Vanilla JS + PDF.js
-- PHPUnit 10
+Application web permettant le dépôt, la validation, la publication et la consultation des mémoires de soutenance.
 
-## Architecture
-```
-MVC + DAO
-View → Controller → Model → DAO → BDD
-```
+## 🛠️ Stack technique
+- **Backend** : PHP 8+
+- **Base de données** : MySQL
+- **Frontend** : Bootstrap 5
+- **Tests** : PHPUnit
 
-## Installation locale
+## 🔐 Comptes de test
+Mot de passe unique : **password123**
 
-```bash
-# 1. Cloner le dépôt
-git clone https://github.com/VOTRE_REPO/projet_gestion_memoires.git
-cd projet_gestion_memoires
+### Technicien
+- koffi@gmail.com
 
-# 2. Installer PHPUnit
-composer install
+### Directeur des études
+- amivi@gmail.com
 
-# 3. Créer la base de données
-mysql -u root -p < sql/database.sql
-mysql -u root -p gestion_memoires < sql/data_test.sql
+### Professeurs
+- gildas@gmail.com
+- aissi@gmail.com
+- fifame@gmail.com
 
-# 4. Configurer la connexion BDD
-# Éditer config/database.php avec vos identifiants
+### Étudiants diplomés (peuvent déposer)
+- jean@gmail.com (L3, Informatique)
+- cossi@gmail.com (M2, Informatique)
+- roland@gmail.com (L3, Réseaux)
+- fructueux@gmail.com (M2, Réseaux)
+- arnaud@gmail.com (L3, Gestion)
 
-# 5. Lancer avec PHP built-in (dev uniquement)
-php -S localhost:8000
-```
+### Commentateurs (consultation uniquement)
+- esperance@gmail.com (L1, Informatique)
+- mariatou@gmail.com (L2, Réseaux)
+- carine@gmail.com (M1, Gestion)
+- benedicte@gmail.com (L1, Informatique)
+- serge@gmail.com (L2, Réseaux)
 
-## Comptes de test (mdp : password123)
-| Rôle        | Email               |
-|-------------|---------------------|
-| Technicien  | tech@uatm.bj        |
-| Directeur   | directeur@uatm.bj   |
-| Professeur  | prof@uatm.bj        |
-| Étudiant L3 | etud@uatm.bj                    |
-
-## Lancer les tests
+## 🧪 Lancer les tests
 ```bash
 ./vendor/bin/phpunit tests/
-```
 
-## Branches Git
-| Membre   | Branche              | Responsabilité                        |
-|----------|----------------------|---------------------------------------|
-| Membre 1 | membre1/auth         | Auth, comptes, import CSV             |
-| Membre 2 | membre2/depot        | Dépôt, modification, voir remarques   |
-| Membre 3 | membre3/consultation | Recherche, consultation, likes        |
-| Membre 4 | membre4/professeur   | Vérification, remarques, validation   |
-| Membre 5 | membre5/directeur    | Visibilité, mise en ligne             |
-| Membre 6 | membre6/integration  | Tests, déploiement, rapport           |
+🌿 Branches Git
+Moubarack/Authentification : Authentification
 
-## Statuts d'un mémoire
-```
-en_attente → en_verification → valide → publie
-                            ↘ rejete → (étudiant modifie) → en_attente
-publie ↔ non_public  (géré par le Directeur des études)
-```
+uploader-memoire : Dépôt mémoire
+
+membre3/consultation : Consultation
+
+steven-branch : Vérification professeur
+
+feature-binome-comptes-responsive : Directeur études
+
+main : Intégration' 
