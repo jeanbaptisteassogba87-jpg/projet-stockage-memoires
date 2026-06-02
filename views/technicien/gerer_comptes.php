@@ -35,6 +35,7 @@ $errorMessages = [
     '1'       => 'Erreur lors de la création du compte.',
     'profil'  => 'Merci de renseigner les informations obligatoires du profil étudiant.',
     'doublon' => 'Un compte existe déjà avec cet email.',
+  'own_account' => 'Impossible de supprimer le compte actuellement connecté.'
 ];
 
 $successMsg = !empty($_GET['success']) ? ($successMessages[$_GET['success']] ?? '') : '';
@@ -282,22 +283,20 @@ $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']] ?? '') 
                           </a>
 
                           <?php if ($user['est_actif']): ?>
-                            <form method="POST" action="/controllers/TechnicienController.php" onsubmit="return confirm('Désactiver ce compte ?')">
-                              <input type="hidden" name="action" value="desactiver_utilisateur">
-                              <input type="hidden" name="id_utilisateur" value="<?= (int) $user['id_utilisateur'] ?>">
-                              <button type="submit" class="btn btn-danger btn-sm">
-                                <i class="bi bi-person-dash me-1"></i> Désactiver
-                              </button>
-                            </form>
+                            <button type="button" class="btn btn-danger btn-sm js-confirm-action"
+                                    data-action="desactiver_utilisateur"
+                                    data-user-id="<?= (int) $user['id_utilisateur'] ?>"
+                                    data-user-name="<?= htmlspecialchars($user['nom']) ?>">
+                              <i class="bi bi-person-dash me-1"></i> Désactiver
+                            </button>
                           <?php endif; ?>
 
-                          <form method="POST" action="/controllers/TechnicienController.php" onsubmit="return confirm('Supprimer définitivement cet utilisateur ?')">
-                            <input type="hidden" name="action" value="supprimer_utilisateur">
-                            <input type="hidden" name="id_utilisateur" value="<?= (int) $user['id_utilisateur'] ?>">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                              <i class="bi bi-trash me-1"></i> Supprimer
-                            </button>
-                          </form>
+                          <button type="button" class="btn btn-outline-danger btn-sm js-confirm-action"
+                                  data-action="supprimer_utilisateur"
+                                  data-user-id="<?= (int) $user['id_utilisateur'] ?>"
+                                  data-user-name="<?= htmlspecialchars($user['nom']) ?>">
+                            <i class="bi bi-trash me-1"></i> Supprimer
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -337,3 +336,66 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>
+
+<!-- Confirmation modal for deactivate/delete actions -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="/controllers/TechnicienController.php" id="confirmActionForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmActionTitle">Confirmer l'action</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmActionMessage">Voulez-vous vraiment procéder ?</p>
+          <input type="hidden" name="action" id="confirmActionInputAction" value="">
+          <input type="hidden" name="id_utilisateur" id="confirmActionInputId" value="">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary" id="confirmActionSubmit">Confirmer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modalEl = document.getElementById('confirmActionModal');
+  if (!modalEl) return;
+
+  const bootstrapModal = new bootstrap.Modal(modalEl);
+  const form = document.getElementById('confirmActionForm');
+  const inputAction = document.getElementById('confirmActionInputAction');
+  const inputId = document.getElementById('confirmActionInputId');
+  const message = document.getElementById('confirmActionMessage');
+
+  document.querySelectorAll('.js-confirm-action').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const action = btn.getAttribute('data-action');
+      const id = btn.getAttribute('data-user-id');
+      const name = btn.getAttribute('data-user-name') || '';
+
+      inputAction.value = action;
+      inputId.value = id;
+
+      if (action === 'desactiver_utilisateur') {
+        message.textContent = `Désactiver le compte « ${name} » ?`;
+        document.getElementById('confirmActionTitle').textContent = 'Désactiver le compte';
+        document.getElementById('confirmActionSubmit').className = 'btn btn-danger';
+      } else if (action === 'supprimer_utilisateur') {
+        message.textContent = `Supprimer définitivement l'utilisateur « ${name} » ? Cette action est irréversible.`;
+        document.getElementById('confirmActionTitle').textContent = "Supprimer l'utilisateur";
+        document.getElementById('confirmActionSubmit').className = 'btn btn-outline-danger';
+      } else {
+        message.textContent = 'Confirmer ?';
+        document.getElementById('confirmActionTitle').textContent = "Confirmer l'action";
+        document.getElementById('confirmActionSubmit').className = 'btn btn-primary';
+      }
+
+      bootstrapModal.show();
+    });
+  });
+});
+</script>

@@ -153,10 +153,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'supprimer_utilisateur') {
         $id = (int) ($_POST['id_utilisateur'] ?? 0);
+        // Empêcher la suppression du compte courant
         if ($id > 0) {
+            if (isset($_SESSION['user_id']) && (int) $_SESSION['user_id'] === $id) {
+                header('Location: ../views/technicien/gerer_comptes.php?error=own_account');
+                exit;
+            }
+
             $dao = new UtilisateurDAO();
             $dao->supprimerUtilisateur($id);
         }
+
         header('Location: ../views/technicien/gerer_comptes.php');
         exit;
     }
