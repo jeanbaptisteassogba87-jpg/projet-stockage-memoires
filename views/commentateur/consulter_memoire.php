@@ -285,7 +285,7 @@ $estProprio = $estAuteur || $estBinome;
                                       style="padding:0 4px;color:var(--text-muted);
                                              background:none;border:none"
                                       title="Supprimer"
-                                      onclick="return confirm('Supprimer ce commentaire ?')">
+                                      data-confirm="Supprimer ce commentaire ?">
                                 <i class="bi bi-trash3" style="font-size:0.8rem"></i>
                               </button>
                             </form>
