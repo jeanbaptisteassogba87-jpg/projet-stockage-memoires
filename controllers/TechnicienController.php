@@ -118,6 +118,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'modifier_utilisateur') {
+        $id = (int) ($_POST['id_utilisateur'] ?? 0);
+        $nom = trim($_POST['nom'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $role = trim($_POST['role'] ?? '');
+        $centreId = (int) ($_POST['centre_id'] ?? 0);
+
+        if ($id <= 0 || $nom === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $centreId <= 0) {
+            header('Location: ../views/technicien/modifier_utilisateur.php?id=' . $id . '&error=1');
+            exit;
+        }
+
+        $dao = new UtilisateurDAO();
+
+        $utilisateurData = $dao->trouverParId($id);
+        if (!$utilisateurData) {
+            header('Location: ../views/technicien/gerer_comptes.php?error=notfound');
+            exit;
+        }
+
+        $utilisateur = new Utilisateur();
+        $utilisateur->setId($id);
+        $utilisateur->setNom($nom);
+        $utilisateur->setEmail($email);
+        $utilisateur->setRole($role);
+        $utilisateur->setCentreId($centreId);
+
+        $ok = $dao->modifierUtilisateur($utilisateur);
+
+        header('Location: ../views/technicien/gerer_comptes.php' . ($ok ? '?success=updated' : '?error=update'));
+        exit;
+    }
+
+    if ($action === 'supprimer_utilisateur') {
+        $id = (int) ($_POST['id_utilisateur'] ?? 0);
+        if ($id > 0) {
+            $dao = new UtilisateurDAO();
+            $dao->supprimerUtilisateur($id);
+        }
+        header('Location: ../views/technicien/gerer_comptes.php');
+        exit;
+    }
+
     if ($action === 'importer_memoires') {
         require_once __DIR__ . '/../dao/MemoireDAO.php';
         require_once __DIR__ . '/../models/Memoire.php';

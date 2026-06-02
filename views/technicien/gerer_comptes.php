@@ -276,19 +276,29 @@ $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']] ?? '') 
                         <?php endif; ?>
                       </td>
                       <td>
-                        <?php if ($user['est_actif']): ?>
-                          <form method="POST"
-                                action="/controllers/TechnicienController.php"
-                                onsubmit="return confirm('Désactiver ce compte ?')">
-                            <input type="hidden" name="action" value="desactiver_utilisateur">
+                        <div class="d-flex gap-2">
+                          <a href="/views/technicien/modifier_utilisateur.php?id=<?= (int) $user['id_utilisateur'] ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil-square me-1"></i> Modifier
+                          </a>
+
+                          <?php if ($user['est_actif']): ?>
+                            <form method="POST" action="/controllers/TechnicienController.php" onsubmit="return confirm('Désactiver ce compte ?')">
+                              <input type="hidden" name="action" value="desactiver_utilisateur">
+                              <input type="hidden" name="id_utilisateur" value="<?= (int) $user['id_utilisateur'] ?>">
+                              <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-person-dash me-1"></i> Désactiver
+                              </button>
+                            </form>
+                          <?php endif; ?>
+
+                          <form method="POST" action="/controllers/TechnicienController.php" onsubmit="return confirm('Supprimer définitivement cet utilisateur ?')">
+                            <input type="hidden" name="action" value="supprimer_utilisateur">
                             <input type="hidden" name="id_utilisateur" value="<?= (int) $user['id_utilisateur'] ?>">
-                            <button type="submit" class="btn btn-danger btn-sm">
-                              <i class="bi bi-person-dash me-1"></i> Désactiver
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                              <i class="bi bi-trash me-1"></i> Supprimer
                             </button>
                           </form>
-                        <?php else: ?>
-                          <span class="text-muted">Aucune action</span>
-                        <?php endif; ?>
+                        </div>
                       </td>
                     </tr>
                   <?php endforeach; ?>

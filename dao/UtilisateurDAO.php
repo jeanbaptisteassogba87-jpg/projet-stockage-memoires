@@ -304,4 +304,38 @@ class UtilisateurDAO
             ':service'        => $service,
         ]);
     }
+
+    /**
+     * Supprime un utilisateur et les lignes associées dans les tables liées.
+     * Retourne true si la suppression principale a réussi.
+     */
+    public function supprimerUtilisateur(int $id): bool
+    {
+        // Supprimer les rôles spécifiques d'abord pour éviter les contraintes
+        $this->pdo->beginTransaction();
+        try {
+            $tables = [
+                'etudiant' => 'utilisateur_id',
+                'professeur' => 'utilisateur_id',
+                'directeur_etudes' => 'utilisateur_id',
+                'technicien' => 'utilisateur_id'
+            ];
+
+            foreach ($tables as $table => $col) {
+                $sql = "DELETE FROM {$table} WHERE {$col} = :id";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute([':id' => $id]);
+            }
+
+            $sql = "DELETE FROM utilisateur WHERE id_utilisateur = :id";
+            $stmt = $this->pdo->prepare($sql);
+            $ok = $stmt->execute([':id' => $id]);
+
+            $this->pdo->commit();
+            return (bool) $ok;
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            return false;
+        }
+    }
 }
