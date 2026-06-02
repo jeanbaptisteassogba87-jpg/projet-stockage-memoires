@@ -28,9 +28,12 @@ $autorise = false;
 
 switch ($role) {
     case ROLE_ETUDIANT:
+        // Chaque étudiant peut accéder à ses propres mémoires
+        // Tout étudiant peut accéder aux mémoires publiés
         $autorise = (
             (int) $memoire['etudiant_id'] === $userId
             || (int) ($memoire['etudiant2_id'] ?? 0) === $userId
+            || $memoire['statut'] === STATUT_PUBLIE
         );
         break;
     case ROLE_PROFESSEUR:
