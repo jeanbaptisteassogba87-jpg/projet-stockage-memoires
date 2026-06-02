@@ -9,7 +9,7 @@ Application web permettant le dépôt, la validation, la publication et la consu
 - **Tests** : PHPUnit
 
 ## 🔐 Comptes de test
-Mot de passe unique : **password123**
+Mot de passe unique : uatm1234
 
 ### Technicien
 - koffi@gmail.com

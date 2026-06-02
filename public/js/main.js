@@ -11,7 +11,7 @@
   // ── Initialisation au chargement du DOM ─────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     initAlertes();
-    initConfirmations();
+    //initConfirmations()
     initBoutonHaut();
     initTooltips();
     initNavActive();
@@ -61,25 +61,6 @@
         alerte.parentNode.removeChild(alerte);
       }
     }, 450);
-  }
-
-
-  // ── Confirmations sur les actions destructives ───────────────
-  // Tout bouton ou lien avec data-confirm="message" affiche une modale native
-
-  function initConfirmations() {
-    document.addEventListener('click', function (e) {
-      var el = e.target.closest('[data-confirm]');
-      if (!el) return;
-
-      var message = el.getAttribute('data-confirm');
-      if (!message) return;
-
-      if (!confirm(message)) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
   }
 
 
