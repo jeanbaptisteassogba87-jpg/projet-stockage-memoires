@@ -299,6 +299,30 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
   </div>
 </div>
 
+<!-- Modale de confirmation rejet -->
+<div class="modal fade" id="confirmRejectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-danger">
+        <h5 class="modal-title text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmer le rejet
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        <p>Êtes-vous sûr de vouloir rejeter ce mémoire ?</p>
+        <p class="text-muted small">L'étudiant pourra le corriger et le resoumettre.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger" id="confirmRejectBtn">
+          <i class="bi bi-x-lg me-1"></i>Rejeter
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Copie le texte de la textarea dans l'input caché avant soumission
 function transfererRemarque(inputId) {
@@ -321,9 +345,13 @@ function soumettreRejet() {
   errEl.style.display = 'none';
   document.getElementById('remarque-input-rejet').value = texte;
 
-  if (confirm('Confirmer le rejet de ce mémoire ?\nL\'étudiant pourra le corriger et le resoumettre.')) {
+  // Afficher la modale de confirmation Bootstrap
+  const confirmModal = new bootstrap.Modal(document.getElementById('confirmRejectModal'));
+  document.getElementById('confirmRejectBtn').onclick = () => {
+    confirmModal.hide();
     document.getElementById('form-rejeter').submit();
-  }
+  };
+  confirmModal.show();
 }
 
 // Masquer l'erreur dès que l'utilisateur commence à taper

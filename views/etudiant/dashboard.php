@@ -230,7 +230,7 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                     </td>
                     <td>
                       <!-- Voir remarques -->
-                      <a href="/views/etudiant/voir_remarques.php"
+                      <a href="/views/etudiant/voir_remarques.php?id=<?= $m['id_memoire'] ?>"
                          class="btn btn-sm btn-outline-secondary me-1"
                          title="Voir les remarques">
                         <i class="bi bi-chat-text"></i>

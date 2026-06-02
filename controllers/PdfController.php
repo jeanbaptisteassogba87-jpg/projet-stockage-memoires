@@ -44,10 +44,12 @@ $autorise = false;
 
 switch ($role) {
     case ROLE_ETUDIANT:
-        // Le déposant et le binôme peuvent consulter le PDF.
+        // Le déposant et le binôme peuvent toujours consulter le PDF.
+        // Les autres étudiants ne peuvent consulter que les mémoires publiés
         $autorise = (
             (int) $memoire['etudiant_id'] === $userId
             || (int) ($memoire['etudiant2_id'] ?? 0) === $userId
+            || $memoire['statut'] === STATUT_PUBLIE
         );
         break;
 

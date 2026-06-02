@@ -19,6 +19,12 @@ if ($_SESSION['doit_changer_mdp']) {
 $memoireDAO = new MemoireDAO();
 $memoires   = $memoireDAO->listerParEtudiant((int) $_SESSION['user_id']);
 
+// Filtrer sur un mémoire spécifique si un ID est fourni
+$memoireIdFilter = (int) ($_GET['id'] ?? 0);
+if ($memoireIdFilter) {
+    $memoires = array_filter($memoires, fn($m) => (int) $m['id_memoire'] === $memoireIdFilter);
+}
+
 // Labels lisibles pour les statuts
 $labelStatut = [
     STATUT_EN_ATTENTE      => 'En attente',
