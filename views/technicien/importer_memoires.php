@@ -126,13 +126,24 @@ if (!empty($_GET['error'])) {
 
                 <div class="row g-3">
 
-                  <!-- Étudiant -->
+                  <!-- Étudiant + Binôme (optionnel) -->
                   <div class="col-md-4">
                     <label style="font-size:0.85rem">
                       Étudiant <span style="color:var(--danger)">*</span>
                     </label>
                     <select name="etudiants_id[]" class="form-select form-select-sm mt-1" required>
                       <option value="">— Choisir —</option>
+                      <?php foreach ($etudiants as $e): ?>
+                        <option value="<?= $e['id_utilisateur'] ?>">
+                          <?= htmlspecialchars($e['nom']) ?>
+                          (<?= htmlspecialchars($e['numero_etudiant']) ?>)
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+
+                    <label class="mt-2" style="font-size:0.85rem">Binôme (optionnel)</label>
+                    <select name="etudiants2_id[]" class="form-select form-select-sm mt-1">
+                      <option value="">— Aucun —</option>
                       <?php foreach ($etudiants as $e): ?>
                         <option value="<?= $e['id_utilisateur'] ?>">
                           <?= htmlspecialchars($e['nom']) ?>
@@ -273,6 +284,12 @@ function getLigneHtml(numero) {
         <div class="col-md-4">
           <label style="font-size:0.85rem">Étudiant <span style="color:var(--danger)">*</span></label>
           <select name="etudiants_id[]" class="form-select form-select-sm mt-1" required>
+            ${optionsHtml}
+          </select>
+
+          <label class="mt-2" style="font-size:0.85rem">Binôme (optionnel)</label>
+          <select name="etudiants2_id[]" class="form-select form-select-sm mt-1">
+            <option value="">— Aucun —</option>
             ${optionsHtml}
           </select>
         </div>

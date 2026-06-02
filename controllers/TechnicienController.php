@@ -173,12 +173,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_once __DIR__ . '/../models/Memoire.php';
         
         $dao = new MemoireDAO();
-        $fichiers  = $_FILES['fichiers_pdf'] ?? null;
-        $titres    = $_POST['titres'] ?? [];
-        $themes    = $_POST['themes'] ?? [];
-        $types     = $_POST['types_diplome'] ?? [];
-        $annees    = $_POST['annees'] ?? [];
-        $etudiants = $_POST['etudiants_id'] ?? [];
+        $fichiers   = $_FILES['fichiers_pdf'] ?? null;
+        $titres     = $_POST['titres'] ?? [];
+        $themes     = $_POST['themes'] ?? [];
+        $types      = $_POST['types_diplome'] ?? [];
+        $annees     = $_POST['annees'] ?? [];
+        $etudiants  = $_POST['etudiants_id'] ?? [];
+        $etudiants2 = $_POST['etudiants2_id'] ?? []; // optional binome from form
 
         if (!$fichiers || empty($titres)) {
             header('Location: ../views/technicien/importer_memoires.php?error=champs_vides');
@@ -199,17 +200,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $erreurs++; continue;
             }
 
+            // --- validations spécifiques (type vs niveau, unicité, binôme) ---
+            $etudiantId = (int) ($etudiants[$i] ?? 0);
+            $etudiantDAO = new EtudiantDAO();
+            $etudiant    = $etudiantDAO->trouverParId($etudiantId);
+
+            if (!$etudiant) {
+                @unlink($destination);
+                $erreurs++; continue;
+            }
+
+            $type = trim($types[$i] ?? '');
+            if (!in_array($type, [DIPLOME_LICENCE, DIPLOME_MASTER], true)) {
+                @unlink($destination);
+                $erreurs++; continue;
+            }
+
+            // Vérifier cohérence type/niveau (L3 -> licence, M2 -> master)
+            $typeAutorise = [
+                'L3' => DIPLOME_LICENCE,
+                'M2' => DIPLOME_MASTER,
+            ];
+
+            if (!in_array($etudiant['niveau_etude'], NIVEAUX_DEPOT, true)
+                || !isset($typeAutorise[$etudiant['niveau_etude']])
+                || $typeAutorise[$etudiant['niveau_etude']] !== $type) {
+                @unlink($destination);
+                $erreurs++; continue;
+            }
+
+            $memoireDAO = new MemoireDAO();
+
+            // Vérifier unicité pour l'étudiant principal
+            $existant = $memoireDAO->trouverParEtudiantEtType($etudiantId, $type);
+            if ($existant) {
+                @unlink($destination);
+                $erreurs++; continue;
+            }
+
+            // Si un binôme est fourni, valider et vérifier unicité
+            $etudiant2Id = (int) ($etudiants2[$i] ?? 0);
+            if ($etudiant2Id > 0) {
+                if ($etudiant2Id === $etudiantId) {
+                    @unlink($destination);
+                    $erreurs++; continue;
+                }
+
+                $binomesPossibles = $etudiantDAO->chercherBinomePossible(
+                    (int) $etudiant['filiere_id'],
+                    $etudiant['niveau_etude'],
+                    $etudiantId
+                );
+                $binomeIds = array_map('intval', array_column($binomesPossibles, 'id_utilisateur'));
+
+                if (!in_array($etudiant2Id, $binomeIds, true)) {
+                    @unlink($destination);
+                    $erreurs++; continue;
+                }
+
+                $existantBinome = $memoireDAO->trouverParEtudiantEtType($etudiant2Id, $type);
+                if ($existantBinome) {
+                    @unlink($destination);
+                    $erreurs++; continue;
+                }
+            } else {
+                $etudiant2Id = null;
+            }
+
+            // Construire objet et insérer
             $memoire = new Memoire();
-            $memoire->setEtudiantId((int)$etudiants[$i]);
+            $memoire->setEtudiantId($etudiantId);
+            $memoire->setEtudiant2Id($etudiant2Id);
             $memoire->setTitre($titres[$i]);
             $memoire->setTheme($themes[$i]);
             $memoire->setFichierPdf($nomFichier);
             $memoire->setStatut('publie');
-            $memoire->setTypeDiplome($types[$i]);
+            $memoire->setTypeDiplome($type);
             $memoire->setAnneeSoutenance((int)$annees[$i]);
             $memoire->setRemarques('');
 
-            $dao->ajouterMemoire($memoire);
+            try {
+                $ok = $memoireDAO->ajouterMemoire($memoire);
+                if (!$ok) {
+                    @unlink($destination);
+                    $erreurs++; continue;
+                }
+            } catch (PDOException $ex) {
+                @unlink($destination);
+                $erreurs++; continue;
+            }
         }
 
         if ($erreurs > 0) {
