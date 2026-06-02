@@ -12,7 +12,8 @@ class Memoire
     private string $date_depot;
     private string $remarques;
     private int $etudiant_id;
-    private int $professeur_id;
+    private ?int $etudiant2_id = null;
+    private ?int $professeur_id = null;
 
     // Getters
     public function getId(): int
@@ -63,7 +64,10 @@ class Memoire
     public function getEtudiantId(): int { 
         return $this->etudiant_id; 
     }
-    public function getProfesseurId(): int { 
+    public function getEtudiant2Id(): ?int {
+        return $this->etudiant2_id;
+    }
+    public function getProfesseurId(): ?int {
         return $this->professeur_id; 
     }
 
@@ -112,8 +116,11 @@ class Memoire
     public function setEtudiantId(int $id): void { 
         $this->etudiant_id = $id; 
     }
-    public function setProfesseurId(int $id): void {
-         $this->professeur_id = $id; 
+    public function setEtudiant2Id(?int $id): void {
+        $this->etudiant2_id = $id;
+    }
+    public function setProfesseurId(?int $id): void {
+        $this->professeur_id = $id;
     }
 
     // Méthodes métier

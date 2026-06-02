@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/constants.php';
 require_once __DIR__ . '/../../dao/EtudiantDAO.php';
 require_once __DIR__ . '/../../dao/MemoireDAO.php';
+require_once __DIR__ . '/../../dao/UtilisateurDAO.php';
 
 requireRole(ROLE_ETUDIANT);
 
@@ -40,6 +41,9 @@ $messages = [
     'trop_lourd'         => 'Le fichier dépasse la taille maximale autorisée (10 Mo).',
     'upload_echec'       => 'Erreur lors de l\'upload. Réessayez.',
     'bdd'                => 'Erreur lors de l\'enregistrement. Contactez l\'administration.',
+    'professeur_invalide'=> 'L\'encadreur choisi est invalide.',
+    'binome_invalide'    => 'Le binôme choisi doit être de la même filière et du même niveau.',
+    'binome_doublon'     => 'Ce binôme a déjà un mémoire pour ce type de diplôme.',
 ];
 $erreur = !empty($_GET['error']) ? ($messages[$_GET['error']] ?? 'Erreur inconnue.') : '';
 
@@ -47,6 +51,17 @@ $erreur = !empty($_GET['error']) ? ($messages[$_GET['error']] ?? 'Erreur inconnu
 $memoireDAO     = new MemoireDAO();
 $deja_licence   = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id'], DIPLOME_LICENCE);
 $deja_master    = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id'], DIPLOME_MASTER);
+
+$utilisateurDAO = new UtilisateurDAO();
+$professeurs    = array_filter(
+    $utilisateurDAO->listerProfesseurs(),
+    fn($professeur) => (int) $professeur['centre_id'] === (int) $etudiant['centre_id']
+);
+$binomes        = $etudiantDAO->chercherBinomePossible(
+    (int) $etudiant['filiere_id'],
+    $etudiant['niveau_etude'],
+    (int) $_SESSION['user_id']
+);
 ?>
 <?php require_once __DIR__ . '/../layout/header.php'; ?>
 <?php require_once __DIR__ . '/../layout/navbar.php'; ?>
@@ -188,6 +203,49 @@ $deja_master    = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id
                 <div class="invalid-feedback">Année invalide (entre 2000 et <?= date('Y') + 1 ?>).</div>
               </div>
 
+              <!-- Encadreur -->
+              <div class="col-md-6">
+                <label for="professeur_id">
+                  Encadreur <span style="color:var(--danger)">*</span>
+                </label>
+                <select name="professeur_id" id="professeur_id" class="form-select mt-1" required>
+                  <option value="">— Choisir un professeur —</option>
+                  <?php foreach ($professeurs as $professeur): ?>
+                    <option value="<?= (int) $professeur['id_utilisateur'] ?>">
+                      <?= htmlspecialchars($professeur['nom']) ?>
+                      <?php if (!empty($professeur['specialite'])): ?>
+                        — <?= htmlspecialchars($professeur['specialite']) ?>
+                      <?php endif; ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <div class="invalid-feedback">Choisissez un encadreur.</div>
+              </div>
+
+              <!-- Binôme optionnel -->
+              <div class="col-md-6">
+                <label for="etudiant2_recherche">
+                  Étudiant 2 <span style="color:var(--text-muted);font-size:0.85rem">(optionnel)</span>
+                </label>
+                <div class="position-relative mt-1">
+                  <input type="text"
+                         id="etudiant2_recherche"
+                         class="form-control"
+                         placeholder="Rechercher par nom, email ou matricule"
+                         autocomplete="off"
+                         aria-describedby="binome_selection">
+                  <input type="hidden" name="etudiant2_id" id="etudiant2_id">
+
+                  <div id="resultats-binomes"
+                       class="list-group position-absolute w-100 shadow-sm"
+                       style="z-index:10;max-height:220px;overflow:auto;display:none">
+                  </div>
+                </div>
+                <div id="binome_selection" class="form-text">
+                  Même filière, même niveau.
+                </div>
+              </div>
+
               <!-- Fichier PDF -->
               <div class="col-12">
                 <label for="fichier_pdf">
@@ -236,6 +294,86 @@ $deja_master    = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const champRecherche = document.getElementById('etudiant2_recherche');
+  const champId = document.getElementById('etudiant2_id');
+  const resultats = document.getElementById('resultats-binomes');
+  const binomes = <?= json_encode(array_values($binomes), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+
+  if (!champRecherche || !champId || !resultats) {
+    return;
+  }
+
+  function fermerResultats() {
+    resultats.style.display = 'none';
+    resultats.innerHTML = '';
+  }
+
+  function afficherResultats(items) {
+    resultats.innerHTML = '';
+
+    if (items.length === 0) {
+      const vide = document.createElement('div');
+      vide.className = 'list-group-item text-muted';
+      vide.textContent = 'Aucun étudiant correspondant.';
+      resultats.appendChild(vide);
+      resultats.style.display = 'block';
+      return;
+    }
+
+    items.slice(0, 8).forEach(function (binome) {
+      const bouton = document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = 'list-group-item list-group-item-action';
+
+      const nom = document.createElement('strong');
+      nom.textContent = binome.nom;
+
+      const details = document.createElement('div');
+      details.className = 'small text-muted';
+      details.textContent = binome.email + ' · ' + binome.numero_etudiant + ' · ' + binome.niveau_etude;
+
+      bouton.appendChild(nom);
+      bouton.appendChild(details);
+
+      bouton.addEventListener('click', function () {
+        champRecherche.value = binome.nom + ' — ' + binome.numero_etudiant;
+        champId.value = binome.id_utilisateur;
+        fermerResultats();
+      });
+
+      resultats.appendChild(bouton);
+    });
+
+    resultats.style.display = 'block';
+  }
+
+  champRecherche.addEventListener('input', function () {
+    const recherche = champRecherche.value.trim().toLowerCase();
+    champId.value = '';
+
+    if (recherche.length < 2) {
+      fermerResultats();
+      return;
+    }
+
+    afficherResultats(binomes.filter(function (binome) {
+      return [binome.nom, binome.email, binome.numero_etudiant]
+        .join(' ')
+        .toLowerCase()
+        .includes(recherche);
+    }));
+  });
+
+  document.addEventListener('click', function (event) {
+    if (!resultats.contains(event.target) && event.target !== champRecherche) {
+      fermerResultats();
+    }
+  });
+});
+</script>
 
 <?php $extraJs = '/public/js/validation.js'; ?>
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

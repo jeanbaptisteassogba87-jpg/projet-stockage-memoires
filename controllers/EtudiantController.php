@@ -10,6 +10,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../dao/MemoireDAO.php';
 require_once __DIR__ . '/../dao/EtudiantDAO.php';
+require_once __DIR__ . '/../dao/UtilisateurDAO.php';
 require_once __DIR__ . '/../models/Memoire.php';
 
 // Seules les requêtes POST sont traitées ici
@@ -33,9 +34,11 @@ if ($action === 'deposer_memoire') {
     $theme           = trim($_POST['theme']            ?? '');
     $type_diplome    = trim($_POST['type_diplome']     ?? '');
     $annee           = (int) ($_POST['annee_soutenance'] ?? 0);
+    $professeurId    = (int) ($_POST['professeur_id']  ?? 0);
+    $etudiant2Id     = (int) ($_POST['etudiant2_id']   ?? 0);
 
     // --- 2. Validation des champs obligatoires --------------
-    if (empty($titre) || empty($theme) || empty($type_diplome) || $annee < 2000) {
+    if (empty($titre) || empty($theme) || empty($type_diplome) || $annee < 2000 || $professeurId <= 0) {
         header('Location: /views/etudiant/deposer_memoire.php?error=champs_vides');
         exit;
     }
@@ -56,7 +59,20 @@ if ($action === 'deposer_memoire') {
         exit;
     }
 
-    // --- 4. Vérifier l'unicité (un seul mémoire par type de diplôme) ---
+    // --- 4. Vérifier l'encadreur choisi ---------------------
+    $utilisateurDAO = new UtilisateurDAO();
+    $professeurs    = array_filter(
+        $utilisateurDAO->listerProfesseurs(),
+        fn($professeur) => (int) $professeur['centre_id'] === (int) $etudiant['centre_id']
+    );
+    $professeurIds  = array_map('intval', array_column($professeurs, 'id_utilisateur'));
+
+    if (!in_array($professeurId, $professeurIds, true)) {
+        header('Location: /views/etudiant/deposer_memoire.php?error=professeur_invalide');
+        exit;
+    }
+
+    // --- 5. Vérifier l'unicité (un seul mémoire par type de diplôme) ---
     $memoireDAO = new MemoireDAO();
     $existant   = $memoireDAO->trouverParEtudiantEtType(
         (int) $_SESSION['user_id'],
@@ -68,7 +84,31 @@ if ($action === 'deposer_memoire') {
         exit;
     }
 
-    // --- 5. Validation du fichier PDF -----------------------
+    // --- 6. Vérifier le binôme optionnel --------------------
+    if ($etudiant2Id > 0) {
+        $binomesPossibles = $etudiantDAO->chercherBinomePossible(
+            (int) $etudiant['filiere_id'],
+            $etudiant['niveau_etude'],
+            (int) $_SESSION['user_id']
+        );
+        $binomeIds = array_map('intval', array_column($binomesPossibles, 'id_utilisateur'));
+
+        if (!in_array($etudiant2Id, $binomeIds, true)) {
+            header('Location: /views/etudiant/deposer_memoire.php?error=binome_invalide');
+            exit;
+        }
+
+        $existantBinome = $memoireDAO->trouverParEtudiantEtType($etudiant2Id, $type_diplome);
+
+        if ($existantBinome) {
+            header('Location: /views/etudiant/deposer_memoire.php?error=binome_doublon');
+            exit;
+        }
+    } else {
+        $etudiant2Id = null;
+    }
+
+    // --- 7. Validation du fichier PDF -----------------------
     $fichier = $_FILES['fichier_pdf'] ?? null;
 
     if (!$fichier || $fichier['error'] !== UPLOAD_ERR_OK) {
@@ -92,7 +132,7 @@ if ($action === 'deposer_memoire') {
         exit;
     }
 
-    // --- 6. Déplacer le fichier dans le dossier de stockage ---
+    // --- 8. Déplacer le fichier dans le dossier de stockage ---
     // Le dossier uploads/ est hors webroot (cf. uploads/.htaccess Deny from all)
     // Le nom du fichier = prefixe unique + extension .pdf
     $nomFichier  = uniqid('mem_', true) . '.pdf';
@@ -103,9 +143,10 @@ if ($action === 'deposer_memoire') {
         exit;
     }
 
-    // --- 7. Construire l'objet Memoire et insérer -----------
+    // --- 9. Construire l'objet Memoire et insérer -----------
     $memoire = new Memoire();
     $memoire->setEtudiantId((int) $_SESSION['user_id']);
+    $memoire->setEtudiant2Id($etudiant2Id);
     $memoire->setTitre($titre);
     $memoire->setTheme($theme);
     $memoire->setFichierPdf($nomFichier);
@@ -113,6 +154,7 @@ if ($action === 'deposer_memoire') {
     $memoire->setTypeDiplome($type_diplome);
     $memoire->setAnneeSoutenance($annee);
     $memoire->setRemarques('');                 // pas encore de remarques
+    $memoire->setProfesseurId($professeurId);
 
     $ok = $memoireDAO->ajouterMemoire($memoire);
 
@@ -123,7 +165,7 @@ if ($action === 'deposer_memoire') {
         exit;
     }
 
-    // --- 8. Succès → retour au dashboard -------------------
+    // --- 10. Succès → retour au dashboard ------------------
     header('Location: /views/etudiant/dashboard.php?success=depot_ok');
     exit;
 }
@@ -143,7 +185,12 @@ if ($action === 'modifier_memoire') {
     $memoireDAO = new MemoireDAO();
     $memoire    = $memoireDAO->trouverParId($id_memoire);
 
-    if (!$memoire || (int) $memoire['etudiant_id'] !== (int) $_SESSION['user_id']) {
+    $estAuteurOuBinome = $memoire && (
+        (int) $memoire['etudiant_id'] === (int) $_SESSION['user_id']
+        || (int) ($memoire['etudiant2_id'] ?? 0) === (int) $_SESSION['user_id']
+    );
+
+    if (!$estAuteurOuBinome) {
         header('Location: /views/etudiant/dashboard.php?error=non_autorise');
         exit;
     }

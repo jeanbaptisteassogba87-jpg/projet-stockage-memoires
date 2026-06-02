@@ -26,7 +26,7 @@ class ProfesseurDAO
      * @param int $centreId  centre du professeur (depuis $_SESSION)
      * @return array
      */
-    public function listerEnAttente(int $centreId): array
+    public function listerEnAttente(int $centreId, ?int $professeurId = null): array
     {
         $sql = "
             SELECT
@@ -47,11 +47,15 @@ class ProfesseurDAO
             INNER JOIN etudiant   e ON e.utilisateur_id  = m.etudiant_id
             WHERE m.statut       = 'en_attente'
               AND u.centre_id    = :centre_id
+              AND (m.professeur_id IS NULL OR m.professeur_id = :professeur_id)
             ORDER BY m.date_depot ASC
         ";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':centre_id' => $centreId]);
+        $stmt->execute([
+            ':centre_id'    => $centreId,
+            ':professeur_id' => $professeurId,
+        ]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -80,6 +84,7 @@ class ProfesseurDAO
             INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
             INNER JOIN etudiant    e ON e.utilisateur_id = m.etudiant_id
             WHERE m.professeur_id = :professeur_id
+              AND m.statut <> 'en_attente'
             ORDER BY m.date_depot DESC
         ";
 
@@ -139,6 +144,7 @@ class ProfesseurDAO
                 professeur_id = :professeur_id
             WHERE id_memoire = :id
               AND statut     = 'en_attente'
+              AND (professeur_id IS NULL OR professeur_id = :professeur_id)
         ";
 
         $stmt = $this->pdo->prepare($sql);
@@ -271,7 +277,7 @@ class ProfesseurDAO
      * @param int $centreId
      * @return int
      */
-    public function compterEnAttenteCentre(int $centreId): int
+    public function compterEnAttenteCentre(int $centreId, ?int $professeurId = null): int
     {
         $sql = "
             SELECT COUNT(*) 
@@ -279,10 +285,14 @@ class ProfesseurDAO
             INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
             WHERE m.statut    = 'en_attente'
               AND u.centre_id = :centre_id
+              AND (m.professeur_id IS NULL OR m.professeur_id = :professeur_id)
         ";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':centre_id' => $centreId]);
+        $stmt->execute([
+            ':centre_id'    => $centreId,
+            ':professeur_id' => $professeurId,
+        ]);
         return (int) $stmt->fetchColumn();
     }
 }

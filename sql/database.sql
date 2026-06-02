@@ -80,10 +80,13 @@ CREATE TABLE memoire (
     date_depot      DATETIME DEFAULT CURRENT_TIMESTAMP,
     remarques       TEXT,
     professeur_id   INT,                     -- assigné lors de la vérification
+    etudiant2_id     INT NULL,                -- binôme optionnel, co-auteur
     FOREIGN KEY (etudiant_id)   REFERENCES etudiant(utilisateur_id),
     FOREIGN KEY (professeur_id) REFERENCES professeur(utilisateur_id),
+    FOREIGN KEY (etudiant2_id)  REFERENCES etudiant(utilisateur_id),
     -- Un étudiant ne peut déposer qu'un seul mémoire par type de diplôme
-    UNIQUE KEY uq_etudiant_diplome (etudiant_id, type_diplome)
+    UNIQUE KEY uq_etudiant_diplome (etudiant_id, type_diplome),
+    UNIQUE KEY uq_binome_diplome (etudiant2_id, type_diplome)
 ) ENGINE=InnoDB;
 
 

@@ -20,7 +20,7 @@ $stats          = $dao->compterParStatut($professeurId);
 $nbEnVerif      = $stats[STATUT_EN_VERIFICATION] ?? 0;
 $nbValides      = $stats[STATUT_VALIDE]          ?? 0;
 $nbRejetes      = $stats[STATUT_REJETE]          ?? 0;
-$nbEnAttente    = $dao->compterEnAttenteCentre($centreId);
+$nbEnAttente    = $dao->compterEnAttenteCentre($centreId, $professeurId);
 
 // Ses mémoires en cours (en_verification)
 $mesMemoires = $dao->listerMesMemoires($professeurId);

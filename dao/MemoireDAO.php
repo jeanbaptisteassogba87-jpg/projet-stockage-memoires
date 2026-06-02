@@ -14,10 +14,10 @@ class MemoireDAO {
     public function ajouterMemoire(Memoire $memoire): bool {
         $sql = "INSERT INTO memoire 
                 (etudiant_id, titre, theme, fichier_pdf, statut, 
-                type_diplome, annee_soutenance, remarques)
+                type_diplome, annee_soutenance, remarques, professeur_id, etudiant2_id)
                 VALUES 
                 (:etudiant_id, :titre, :theme, :fichier_pdf, :statut, 
-                :type_diplome, :annee_soutenance, :remarques)";
+                :type_diplome, :annee_soutenance, :remarques, :professeur_id, :etudiant2_id)";
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute([
             ':etudiant_id'      => $memoire->getEtudiantId(),
@@ -28,6 +28,8 @@ class MemoireDAO {
             ':type_diplome'     => $memoire->getTypeDiplome(),
             ':annee_soutenance' => $memoire->getAnneeSoutenance(),
             ':remarques'        => $memoire->getRemarques(),
+            ':professeur_id'    => $memoire->getProfesseurId(),
+            ':etudiant2_id'     => $memoire->getEtudiant2Id(),
         ]);
     }
 
@@ -64,7 +66,9 @@ class MemoireDAO {
     // Lister les mémoires d'un étudiant
     public function listerParEtudiant(int $etudiantId): array {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM memoire WHERE etudiant_id = :id ORDER BY date_depot DESC"
+            "SELECT * FROM memoire
+             WHERE etudiant_id = :id OR etudiant2_id = :id
+             ORDER BY date_depot DESC"
         );
         $stmt->execute([':id' => $etudiantId]);
         return $stmt->fetchAll();
@@ -84,8 +88,8 @@ class MemoireDAO {
         $sql = "
             SELECT *
             FROM memoire
-            WHERE etudiant_id  = :etudiant_id
-              AND type_diplome  = :type_diplome
+            WHERE (etudiant_id = :etudiant_id OR etudiant2_id = :etudiant_id)
+              AND type_diplome = :type_diplome
             LIMIT 1
         ";
 
@@ -148,7 +152,7 @@ class MemoireDAO {
     public function compterParEtudiant(int $etudiantId): int
     {
         $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM memoire WHERE etudiant_id = :id"
+            "SELECT COUNT(*) FROM memoire WHERE etudiant_id = :id OR etudiant2_id = :id"
         );
         $stmt->execute([':id' => $etudiantId]);
         return (int) $stmt->fetchColumn();

@@ -191,6 +191,7 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
               </thead>
               <tbody>
                 <?php foreach ($memoires as $m): ?>
+                  <?php $estBinome = (int) ($m['etudiant2_id'] ?? 0) === (int) $_SESSION['user_id']; ?>
                   <tr>
                     <td>
                       <span title="<?= htmlspecialchars($m['titre']) ?>">
@@ -208,6 +209,9 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                       <span class="badge badge-<?= $m['statut'] ?>">
                         <?= htmlspecialchars($labelStatut[$m['statut']] ?? $m['statut']) ?>
                       </span>
+                      <?php if ($estBinome): ?>
+                        <span class="badge bg-secondary ms-1">Binôme</span>
+                      <?php endif; ?>
                     </td>
                     <td>
                       <!-- Voir remarques -->

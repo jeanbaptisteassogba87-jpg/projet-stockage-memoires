@@ -76,6 +76,7 @@ $labelStatut = [
 
       <?php else: ?>
         <?php foreach ($memoires as $m): ?>
+          <?php $estBinome = (int) ($m['etudiant2_id'] ?? 0) === (int) $_SESSION['user_id']; ?>
           <div class="card mb-4">
             <div class="card-header-uatm d-flex justify-content-between align-items-center">
               <span>
@@ -85,6 +86,9 @@ $labelStatut = [
               <span class="badge badge-<?= $m['statut'] ?>">
                 <?= htmlspecialchars($labelStatut[$m['statut']] ?? $m['statut']) ?>
               </span>
+              <?php if ($estBinome): ?>
+                <span class="badge bg-secondary ms-2">Binôme</span>
+              <?php endif; ?>
             </div>
             <div class="card-body">
 

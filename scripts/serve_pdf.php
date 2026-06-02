@@ -28,7 +28,10 @@ $autorise = false;
 
 switch ($role) {
     case ROLE_ETUDIANT:
-        $autorise = ((int) $memoire['etudiant_id'] === $userId);
+        $autorise = (
+            (int) $memoire['etudiant_id'] === $userId
+            || (int) ($memoire['etudiant2_id'] ?? 0) === $userId
+        );
         break;
     case ROLE_PROFESSEUR:
         $autorise = (

@@ -17,7 +17,7 @@ $dao          = new ProfesseurDAO();
 $professeurId = (int) $_SESSION['user_id'];
 $centreId     = (int) $_SESSION['centre_id'];
 
-$enAttente   = $dao->listerEnAttente($centreId);
+$enAttente   = $dao->listerEnAttente($centreId, $professeurId);
 $mesMemoires = $dao->listerMesMemoires($professeurId);
 
 $labelStatut = [

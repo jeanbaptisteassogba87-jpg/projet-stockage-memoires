@@ -1,7 +1,11 @@
 <?php
 
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../models/Utilisateur.php';
 require_once __DIR__ . '/../dao/UtilisateurDAO.php';
+
+requireRole(ROLE_TECHNICIEN);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -9,34 +13,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     
     if ($action === 'creer_utilisateur') {
+        $nom          = trim($_POST['nom'] ?? '');
+        $email        = trim($_POST['email'] ?? '');
+        $motDePasse   = trim($_POST['mot_de_passe'] ?? '');
+        $role         = trim($_POST['role'] ?? '');
+        $centreId     = (int) ($_POST['centre_id'] ?? 0);
+        $rolesValides = ['etudiant', 'professeur', 'directeur', 'technicien'];
+        $niveau       = trim($_POST['niveau_etude'] ?? '');
+        $filiereId    = (int) ($_POST['filiere_id'] ?? 0);
+        $numeroEtud   = trim($_POST['numero_etudiant'] ?? '');
+
+        if (
+            $nom === ''
+            || !filter_var($email, FILTER_VALIDATE_EMAIL)
+            || $motDePasse === ''
+            || !in_array($role, $rolesValides, true)
+            || $centreId <= 0
+        ) {
+            header('Location: ../views/technicien/gerer_comptes.php?error=1');
+            exit;
+        }
+
+        if ($role === 'etudiant') {
+            $niveauxValides = ['L1', 'L2', 'L3', 'M1', 'M2'];
+            if ($numeroEtud === '' || !in_array($niveau, $niveauxValides, true) || $filiereId <= 0) {
+                header('Location: ../views/technicien/gerer_comptes.php?error=profil');
+                exit;
+            }
+        }
+
+        $dao = new UtilisateurDAO();
+
+        if ($dao->trouverParEmail($email)) {
+            header('Location: ../views/technicien/gerer_comptes.php?error=doublon');
+            exit;
+        }
 
         $utilisateur = new Utilisateur();
 
-        $utilisateur->setNom($_POST['nom']);
+        $utilisateur->setNom($nom);
 
-        $utilisateur->setEmail($_POST['email']);
+        $utilisateur->setEmail($email);
 
         $motDePasseHash = password_hash(
-            $_POST['mot_de_passe'],
+            $motDePasse,
             PASSWORD_DEFAULT
         );
 
         $utilisateur->setMotDePasse($motDePasseHash);
 
-        $utilisateur->setRole($_POST['role']);
+        $utilisateur->setRole($role);
 
-        $utilisateur->setCentreId($_POST['centre_id']);
+        $utilisateur->setCentreId($centreId);
 
        
         $utilisateur->setEstActif(1);
 
         $utilisateur->setDoitChangerMdp(1);
 
-        $dao = new UtilisateurDAO();
-
         $resultat = $dao->creerUtilisateur($utilisateur);
 
         if ($resultat) {
+            $nouvelId = $dao->getDernierId();
+
+            if ($nouvelId) {
+                if ($role === 'etudiant') {
+                    $dao->creerEtudiant($nouvelId, $numeroEtud, $niveau, $filiereId);
+                } elseif ($role === 'professeur') {
+                    $dao->creerProfesseur(
+                        $nouvelId,
+                        trim($_POST['specialite'] ?? ''),
+                        trim($_POST['grade'] ?? '')
+                    );
+                } elseif ($role === 'directeur') {
+                    $dao->creerDirecteur($nouvelId, trim($_POST['responsabilite'] ?? ''));
+                } elseif ($role === 'technicien') {
+                    $dao->creerTechnicien($nouvelId, trim($_POST['service'] ?? ''));
+                }
+            }
 
             header('Location: ../views/technicien/gerer_comptes.php?success=1');
 
@@ -235,6 +289,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $idNouvel = $dao->getDernierId();
                 if ($idNouvel && $filiereId > 0 && !empty($numEtud)) {
                     $dao->creerEtudiant($idNouvel, $numEtud, $niveau, $filiereId);
+                }
+            } elseif ($role === 'professeur') {
+                $idNouvel = $dao->getDernierId();
+                if ($idNouvel) {
+                    $dao->creerProfesseur($idNouvel);
+                }
+            } elseif ($role === 'directeur') {
+                $idNouvel = $dao->getDernierId();
+                if ($idNouvel) {
+                    $dao->creerDirecteur($idNouvel);
+                }
+            } elseif ($role === 'technicien') {
+                $idNouvel = $dao->getDernierId();
+                if ($idNouvel) {
+                    $dao->creerTechnicien($idNouvel);
                 }
             }
 

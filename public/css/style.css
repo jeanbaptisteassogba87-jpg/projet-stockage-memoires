@@ -177,3 +177,47 @@ label { font-weight: 500; color: var(--text-main); }
   padding-left: 12px;
   margin-bottom: 20px;
 }
+
+/* --- Responsivité globale --- */
+.table-responsive {
+  overflow-x: auto;
+}
+.table-responsive .table {
+  min-width: 760px;
+}
+
+@media (max-width: 767.98px) {
+  body {
+    font-size: 14px;
+  }
+
+  .sidebar {
+    min-height: auto;
+    padding: 0.5rem 0;
+  }
+
+  .sidebar .nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 0 0.5rem;
+  }
+
+  .sidebar .nav-link {
+    white-space: nowrap;
+    margin: 2px 4px;
+    padding: 8px 12px;
+  }
+
+  .card-header-uatm {
+    padding: 12px 14px;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .btn {
+    max-width: 100%;
+  }
+}

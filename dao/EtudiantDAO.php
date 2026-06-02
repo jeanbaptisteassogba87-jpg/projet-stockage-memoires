@@ -78,4 +78,42 @@ class EtudiantDAO
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Cherche les étudiants qui peuvent être choisis comme binôme :
+     * même filière, même niveau, actifs, et différents de l'étudiant connecté.
+     *
+     * @param int    $filiereId
+     * @param string $niveau
+     * @param int    $etudiantId
+     * @return array
+     */
+    public function chercherBinomePossible(int $filiereId, string $niveau, int $etudiantId): array
+    {
+        $sql = "
+            SELECT
+                u.id_utilisateur,
+                u.nom,
+                u.email,
+                e.numero_etudiant,
+                e.niveau_etude,
+                e.filiere_id
+            FROM utilisateur u
+            INNER JOIN etudiant e ON e.utilisateur_id = u.id_utilisateur
+            WHERE e.filiere_id = :filiere_id
+              AND e.niveau_etude = :niveau
+              AND u.id_utilisateur <> :etudiant_id
+              AND u.est_actif = 1
+            ORDER BY u.nom ASC
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':filiere_id'  => $filiereId,
+            ':niveau'      => $niveau,
+            ':etudiant_id' => $etudiantId,
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

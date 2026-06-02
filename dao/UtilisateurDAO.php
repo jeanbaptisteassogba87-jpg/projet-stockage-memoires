@@ -154,13 +154,42 @@ class UtilisateurDAO
     public function getAllUtilisateurs()
     {
         $sql = "
-            SELECT *
-            FROM utilisateur
-            ORDER BY id_utilisateur DESC
+            SELECT
+                u.*,
+                c.nom_centre
+            FROM utilisateur u
+            LEFT JOIN centre c ON c.id_centre = u.centre_id
+            ORDER BY u.id_utilisateur DESC
         ";
 
         $requete = $this->pdo->query($sql);
 
+        return $requete->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Liste les professeurs actifs disponibles comme encadreurs.
+     *
+     * @return array
+     */
+    public function listerProfesseurs(): array
+    {
+        $sql = "
+            SELECT
+                u.id_utilisateur,
+                u.nom,
+                u.email,
+                u.centre_id,
+                p.specialite,
+                p.grade
+            FROM utilisateur u
+            INNER JOIN professeur p ON p.utilisateur_id = u.id_utilisateur
+            WHERE u.role = 'professeur'
+              AND u.est_actif = 1
+            ORDER BY u.nom ASC
+        ";
+
+        $requete = $this->pdo->query($sql);
         return $requete->fetchAll(PDO::FETCH_ASSOC);
     }
      public function changerMotDePasse(int $id, string $nouveauHash): bool
@@ -223,6 +252,56 @@ class UtilisateurDAO
             ':numero_etudiant' => $numeroEtudiant,
             ':niveau_etude'    => $niveauEtude,
             ':filiere_id'      => $filiereId,
+        ]);
+    }
+
+    public function creerProfesseur(
+        int $utilisateurId,
+        string $specialite = '',
+        string $grade = ''
+    ): bool {
+        $sql = "
+            INSERT IGNORE INTO professeur (utilisateur_id, specialite, grade)
+            VALUES (:utilisateur_id, :specialite, :grade)
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':utilisateur_id' => $utilisateurId,
+            ':specialite'     => $specialite,
+            ':grade'          => $grade,
+        ]);
+    }
+
+    public function creerDirecteur(
+        int $utilisateurId,
+        string $responsabilite = ''
+    ): bool {
+        $sql = "
+            INSERT IGNORE INTO directeur_etudes (utilisateur_id, responsabilite)
+            VALUES (:utilisateur_id, :responsabilite)
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':utilisateur_id' => $utilisateurId,
+            ':responsabilite' => $responsabilite,
+        ]);
+    }
+
+    public function creerTechnicien(
+        int $utilisateurId,
+        string $service = ''
+    ): bool {
+        $sql = "
+            INSERT IGNORE INTO technicien (utilisateur_id, service)
+            VALUES (:utilisateur_id, :service)
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':utilisateur_id' => $utilisateurId,
+            ':service'        => $service,
         ]);
     }
 }
