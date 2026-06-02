@@ -188,12 +188,12 @@ $labelStatut = [
                             <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                             <button type="submit"
                                     class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Retirer ce mémoire de la plateforme publique ?')">
+                                    data-confirm="Retirer ce mémoire de la plateforme publique ?">
                               <i class="bi bi-eye-slash me-1"></i> Dépublier
                             </button>
                           </form>
 
-                        <?php elseif (in_array($m['statut'], [STATUT_VALIDE, STATUT_NON_PUBLIC])): ?>
+                        <?php elseif (in_array($m['statut'], [STATUT_VALIDE, STATUT_NON_PUBLIC], true)): ?>
                           <!-- Publier -->
                           <form method="POST" action="/controllers/DirecteurController.php"
                                 style="display:inline">
@@ -201,11 +201,15 @@ $labelStatut = [
                             <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                             <button type="submit"
                                     class="btn btn-sm btn-uatm"
-                                    onclick="return confirm('Publier ce mémoire sur la plateforme ?')">
+                                    data-confirm="Publier ce mémoire sur la plateforme ?">
                               <i class="bi bi-globe me-1"></i> Publier
                             </button>
                           </form>
                         <?php endif; ?>
+                        <a href="/views/directeur/preview_memoire.php?id=<?= $m['id_memoire'] ?>"
+                           class="btn btn-sm btn-outline-secondary ms-1">
+                          <i class="bi bi-eye me-1"></i> Prévisualiser
+                        </a>
                       </td>
                     </tr>
                   <?php endforeach; ?>

@@ -52,6 +52,9 @@ $memoireDAO     = new MemoireDAO();
 $deja_licence   = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id'], DIPLOME_LICENCE);
 $deja_master    = $memoireDAO->trouverParEtudiantEtType((int) $_SESSION['user_id'], DIPLOME_MASTER);
 
+$autoriseLicence = $etudiant['niveau_etude'] === 'L3';
+$autoriseMaster  = $etudiant['niveau_etude'] === 'M2';
+
 $utilisateurDAO = new UtilisateurDAO();
 $professeurs    = array_filter(
     $utilisateurDAO->listerProfesseurs(),
@@ -171,16 +174,16 @@ $binomes        = $etudiantDAO->chercherBinomePossible(
 
                   <!-- Licence : désactivée si déjà déposée -->
                   <option value="licence"
-                          <?= ($deja_licence ? 'disabled' : '') ?>
-                          <?= ($etudiant['niveau_etude'] === 'L3' ? 'selected' : '') ?>>
-                    Licence<?= $deja_licence ? ' (déjà déposé)' : '' ?>
+                          <?= ($deja_licence || !$autoriseLicence ? 'disabled' : '') ?>
+                          <?= ($autoriseLicence && !$deja_licence ? 'selected' : '') ?>>
+                    Licence<?= !$autoriseLicence ? ' (non autorisé pour votre niveau)' : ($deja_licence ? ' (déjà déposé)' : '') ?>
                   </option>
 
                   <!-- Master : désactivée si déjà déposée -->
                   <option value="master"
-                          <?= ($deja_master ? 'disabled' : '') ?>
-                          <?= ($etudiant['niveau_etude'] === 'M2' ? 'selected' : '') ?>>
-                    Master<?= $deja_master ? ' (déjà déposé)' : '' ?>
+                          <?= ($deja_master || !$autoriseMaster ? 'disabled' : '') ?>
+                          <?= ($autoriseMaster && !$deja_master ? 'selected' : '') ?>>
+                    Master<?= !$autoriseMaster ? ' (non autorisé pour votre niveau)' : ($deja_master ? ' (déjà déposé)' : '') ?>
                   </option>
 
                 </select>

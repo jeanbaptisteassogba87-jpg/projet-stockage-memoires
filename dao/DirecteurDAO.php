@@ -112,6 +112,48 @@ class DirecteurDAO
     }
 
     /**
+     * Récupère un mémoire appartenant au centre du directeur pour prévisualisation.
+     * Le directeur peut consulter les mémoires en statut valide, non_public ou publie.
+     *
+     * @param int $idMemoire
+     * @param int $centreId
+     * @return array|null
+     */
+    public function trouverMemoirePreview(int $idMemoire, int $centreId): ?array
+    {
+        $sql = "
+            SELECT
+                m.*,
+                u.nom          AS nom_etudiant,
+                u.email        AS email_etudiant,
+                e.niveau_etude,
+                e.numero_etudiant,
+                f.nom_filiere,
+                c.nom_centre,
+                prof.nom       AS nom_professeur
+            FROM memoire m
+            INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
+            INNER JOIN etudiant e ON e.utilisateur_id = m.etudiant_id
+            LEFT JOIN filiere f ON f.id_filiere = e.filiere_id
+            LEFT JOIN centre c ON c.id_centre = u.centre_id
+            LEFT JOIN utilisateur prof ON prof.id_utilisateur = m.professeur_id
+            WHERE m.id_memoire = :id
+              AND u.centre_id = :centre_id
+              AND m.statut IN ('valide', 'non_public', 'publie')
+            LIMIT 1
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':id'        => $idMemoire,
+            ':centre_id' => $centreId,
+        ]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
+    /**
      * Stats globales pour le dashboard directeur
      * Retourne le nombre de mémoires par statut dans son centre
      *
