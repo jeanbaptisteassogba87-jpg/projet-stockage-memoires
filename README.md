@@ -45,6 +45,8 @@ Le barème initial est le suivant : moins de 10, Ajourné ; de 10 à moins de 12
 
 ### Comptes de démonstration
 
+Ces comptes sont créés uniquement par `sql/data_test.sql`, lors de l'installation sur une base de développement vide. Ils ne remplacent pas les comptes déjà présents dans ta base locale et ne modifient pas leurs identifiants.
+
 Mot de passe : `password`
 
 | Rôle | Adresse |
