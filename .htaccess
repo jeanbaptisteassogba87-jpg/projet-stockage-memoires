@@ -1,0 +1,12 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
+</IfModule>
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "^(?:\.gitignore|README\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml|router\.php)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>

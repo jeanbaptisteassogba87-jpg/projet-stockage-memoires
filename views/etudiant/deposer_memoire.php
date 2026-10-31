@@ -129,6 +129,7 @@ $binomes        = $etudiantDAO->chercherBinomePossible(
                 enctype="multipart/form-data"
                 id="form-depot"
                 novalidate>
+            <?= csrfField() ?>
 
             <input type="hidden" name="action" value="deposer_memoire">
 

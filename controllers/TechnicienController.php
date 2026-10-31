@@ -8,6 +8,7 @@ require_once __DIR__ . '/../dao/UtilisateurDAO.php';
 requireRole(ROLE_TECHNICIEN);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrfToken();
 
     $action = $_POST['action'] ?? '';
 
@@ -190,7 +191,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erreurs = 0;
 
         for ($i = 0; $i < $nbFichiers; $i++) {
-            if ($fichiers['type'][$i] !== 'application/pdf') {
+            if (($fichiers['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
+                || ($fichiers['size'][$i] ?? 0) > MAX_PDF_SIZE) {
+                $erreurs++; continue;
+            }
+
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            if ($finfo->file($fichiers['tmp_name'][$i]) !== 'application/pdf') {
                 $erreurs++; continue;
             }
             $nomFichier  = uniqid('memoire_') . '.pdf';

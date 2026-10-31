@@ -207,6 +207,7 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
                   <!-- Enregistrer la remarque seule -->
                   <form method="POST" action="/controllers/ProfesseurController.php"
                         id="form-remarque">
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"     value="ajouter_remarque">
                     <input type="hidden" name="id_memoire" value="<?= $memoire['id_memoire'] ?>">
                     <input type="hidden" name="remarque"   id="remarque-input-note">
@@ -225,6 +226,7 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
                   <!-- Valider -->
                   <form method="POST" action="/controllers/ProfesseurController.php"
                         id="form-valider">
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"     value="valider">
                     <input type="hidden" name="id_memoire" value="<?= $memoire['id_memoire'] ?>">
                     <button type="submit"
@@ -237,6 +239,7 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
                   <!-- Rejeter -->
                   <form method="POST" action="/controllers/ProfesseurController.php"
                         id="form-rejeter">
+                    <?= csrfField() ?>
                     <input type="hidden" name="action"     value="rejeter">
                     <input type="hidden" name="id_memoire" value="<?= $memoire['id_memoire'] ?>">
                     <input type="hidden" name="remarque"   id="remarque-input-rejet">

@@ -6,6 +6,7 @@ class Database
     private string $dbname;
     private string $username;
     private string $password;
+    private ?int $port;
 
     public function __construct()
     {
@@ -16,6 +17,8 @@ class Database
         $this->dbname = getenv('DB_NAME') ?: ($localConfig['dbname'] ?? '');
         $this->username = getenv('DB_USER') ?: ($localConfig['username'] ?? '');
         $this->password = getenv('DB_PASSWORD') ?: ($localConfig['password'] ?? '');
+        $port = getenv('DB_PORT') ?: ($localConfig['port'] ?? '');
+        $this->port = $port !== '' ? (int) $port : null;
     }
 
     public function connect(): PDO
@@ -27,8 +30,13 @@ class Database
         }
 
         try {
+            $dsn = "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4";
+            if ($this->port !== null) {
+                $dsn .= ';port=' . $this->port;
+            }
+
             $pdo = new PDO(
-                "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4",
+                $dsn,
                 $this->username,
                 $this->password,
                 [

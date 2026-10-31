@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+requireCsrfToken();
+
 // L'utilisateur doit être connecté et avoir le rôle étudiant
 requireRole(ROLE_ETUDIANT);
 
@@ -221,6 +223,8 @@ if ($action === 'modifier_memoire') {
     }
 
     // --- 4. Préparer les données à mettre à jour ---
+    $nouveauFichier = null;
+    $ancienFichier = null;
     $data = [
         'titre'            => $titre,
         'theme'            => $theme,
@@ -255,12 +259,8 @@ if ($action === 'modifier_memoire') {
             exit;
         }
 
-        // Supprimer l'ancien fichier PDF du serveur
-        $ancienFichier = PDF_STORAGE_PATH . $memoire['fichier_pdf'];
-        if (file_exists($ancienFichier)) {
-            @unlink($ancienFichier);
-        }
-
+        $nouveauFichier = $destination;
+        $ancienFichier = PDF_STORAGE_PATH . basename($memoire['fichier_pdf']);
         $data['fichier_pdf'] = $nomFichier;
     }
 
@@ -268,8 +268,15 @@ if ($action === 'modifier_memoire') {
     $ok = $memoireDAO->modifierMemoire($id_memoire, $data);
 
     if (!$ok) {
+        if ($nouveauFichier !== null && is_file($nouveauFichier)) {
+            unlink($nouveauFichier);
+        }
         header('Location: /views/etudiant/modifier_memoire.php?id=' . $id_memoire . '&error=bdd');
         exit;
+    }
+
+    if ($ancienFichier !== null && is_file($ancienFichier)) {
+        unlink($ancienFichier);
     }
 
     header('Location: /views/etudiant/dashboard.php?success=modif_ok');

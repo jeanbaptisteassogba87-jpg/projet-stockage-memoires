@@ -4,6 +4,8 @@ CREATE DATABASE IF NOT EXISTS gestion_memoires
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
+USE gestion_memoires;
+
 CREATE TABLE centre (
     id_centre           INT AUTO_INCREMENT PRIMARY KEY,
     nom_centre          VARCHAR(100) NOT NULL,
@@ -79,6 +81,7 @@ CREATE TABLE memoire (
     annee_soutenance YEAR NOT NULL,
     date_depot      DATETIME DEFAULT CURRENT_TIMESTAMP,
     remarques       TEXT,
+    note_jury       DECIMAL(4,2) NULL,
     professeur_id   INT,                     -- assigné lors de la vérification
     etudiant2_id     INT NULL,                -- binôme optionnel, co-auteur
     FOREIGN KEY (etudiant_id)   REFERENCES etudiant(utilisateur_id),

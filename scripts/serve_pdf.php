@@ -37,7 +37,8 @@ switch ($role) {
     case ROLE_PROFESSEUR:
         $autorise = (
             (int) $memoire['professeur_id'] === $userId
-            || $memoire['statut'] === STATUT_EN_ATTENTE
+            || ($memoire['statut'] === STATUT_EN_ATTENTE
+                && empty($memoire['professeur_id']))
         );
         break;
     case ROLE_DIRECTEUR:

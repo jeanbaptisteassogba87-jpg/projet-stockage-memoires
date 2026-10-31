@@ -51,7 +51,7 @@ $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']]   ?? ''
 $role = $_SESSION['user_role'] ?? null;
 
 // Déterminer si l'utilisateur est l'auteur ou le binôme
-$estAuteur  = (isset($memoire['id_etudiant']) && (int) $memoire['id_etudiant'] === $userId);
+$estAuteur  = ((int) $memoire['etudiant_id'] === $userId);
 $estBinome  = (isset($memoire['etudiant2_id']) && (int) $memoire['etudiant2_id'] === $userId);
 $estProprio = $estAuteur || $estBinome;
 ?>
@@ -192,6 +192,7 @@ $estProprio = $estAuteur || $estBinome;
                 <?php if ($userId > 0): ?>
                 <form method="POST" action="/controllers/CommentateurController.php"
                       style="margin:0">
+                  <?= csrfField() ?>
                   <input type="hidden" name="action"     value="toggler_like">
                   <input type="hidden" name="memoire_id" value="<?= $memoire['id_memoire'] ?>">
                   <input type="hidden" name="retour"
@@ -225,6 +226,7 @@ $estProprio = $estAuteur || $estBinome;
               <?php if ($userId > 0): ?>
               <form method="POST" action="/controllers/CommentateurController.php"
                     class="mb-4">
+                <?= csrfField() ?>
                 <input type="hidden" name="action"     value="ajouter_commentaire">
                 <input type="hidden" name="memoire_id" value="<?= $memoire['id_memoire'] ?>">
                 <label for="contenu" style="font-size:0.88rem;margin-bottom:6px">
@@ -284,6 +286,7 @@ $estProprio = $estAuteur || $estBinome;
                             <form method="POST"
                                   action="/controllers/CommentateurController.php"
                                   style="margin:0">
+                              <?= csrfField() ?>
                               <input type="hidden" name="action"
                                      value="supprimer_commentaire">
                               <input type="hidden" name="id_commentaire"

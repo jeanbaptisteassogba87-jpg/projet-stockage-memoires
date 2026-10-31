@@ -63,6 +63,7 @@ $erreur = !empty($_GET['error']) ? ($messages[$_GET['error']] ?? 'Erreur inconnu
 
     <!-- Formulaire -->
     <form method="POST" action="/controllers/AuthController.php" novalidate>
+      <?= csrfField() ?>
       <input type="hidden" name="action" value="changer_mdp">
 
       <!-- Nouveau mot de passe -->

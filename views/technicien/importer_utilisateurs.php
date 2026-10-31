@@ -134,6 +134,7 @@ if ($resumeImport) {
                     action="/controllers/TechnicienController.php"
                     enctype="multipart/form-data"
                     id="form-csv">
+                <?= csrfField() ?>
 
                 <input type="hidden" name="action" value="importer_utilisateurs">
 

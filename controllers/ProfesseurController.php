@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+requireCsrfToken();
+
 // Doit être connecté avec le rôle professeur
 requireRole(ROLE_PROFESSEUR);
 

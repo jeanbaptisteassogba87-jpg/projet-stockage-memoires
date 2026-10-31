@@ -36,6 +36,7 @@ class DirecteurDAO
                 m.annee_soutenance,
                 m.date_depot,
                 m.statut,
+                m.note_jury,
                 u.nom       AS nom_etudiant,
                 p.nom       AS nom_professeur,
                 e.niveau_etude,
@@ -53,6 +54,48 @@ class DirecteurDAO
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':centre_id' => $centreId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Enregistre la note finale communiquée par le jury pour un mémoire du centre. */
+    public function enregistrerNoteJury(int $idMemoire, int $centreId, float $note): bool
+    {
+        $sql = "
+            UPDATE memoire m
+            INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
+            SET m.note_jury = :note
+            WHERE m.id_memoire = :id
+              AND m.statut IN ('valide', 'publie', 'non_public')
+              AND u.centre_id = :centre_id
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':note' => number_format($note, 2, '.', ''),
+            ':id' => $idMemoire,
+            ':centre_id' => $centreId,
+        ]);
+
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+
+        $check = $this->pdo->prepare("
+            SELECT 1
+            FROM memoire m
+            INNER JOIN utilisateur u ON u.id_utilisateur = m.etudiant_id
+            WHERE m.id_memoire = :id
+              AND m.statut IN ('valide', 'publie', 'non_public')
+              AND u.centre_id = :centre_id
+              AND m.note_jury = :note
+            LIMIT 1
+        ");
+        $check->execute([
+            ':id' => $idMemoire,
+            ':centre_id' => $centreId,
+            ':note' => number_format($note, 2, '.', ''),
+        ]);
+
+        return (bool) $check->fetchColumn();
     }
 
     /**

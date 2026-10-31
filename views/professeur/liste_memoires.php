@@ -131,6 +131,7 @@ $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']]   ?? ''
                       <!-- Prendre en charge via POST -->
                       <form method="POST" action="/controllers/ProfesseurController.php"
                             style="display:inline">
+                        <?= csrfField() ?>
                         <input type="hidden" name="action"     value="prendre_en_charge">
                         <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                         <button type="submit" class="btn btn-sm btn-uatm">

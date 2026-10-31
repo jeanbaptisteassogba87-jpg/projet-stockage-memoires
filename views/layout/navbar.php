@@ -20,9 +20,12 @@
         </li>
         <li class="nav-item">
           <?php if (!empty($_SESSION['user_id'])): ?>
-            <a class="nav-link" href="/logout.php">
-              <i class="bi bi-box-arrow-right"></i> Déconnexion
-            </a>
+            <form method="POST" action="/logout.php" class="d-inline">
+              <?= csrfField() ?>
+              <button class="nav-link bg-transparent border-0" type="submit">
+                <i class="bi bi-box-arrow-right"></i> Déconnexion
+              </button>
+            </form>
           <?php else: ?>
             <a class="nav-link" href="/views/auth/login.php">
               <i class="bi bi-box-arrow-in-right"></i> Connexion

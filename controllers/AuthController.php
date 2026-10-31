@@ -5,13 +5,14 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/constants.php';   
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrfToken();
 
     $action = $_POST['action'] ?? '';
 
     if ($action === 'login') {
 
         $email = trim($_POST['email'] ?? '');
-        $motDePasse = trim($_POST['mot_de_passe'] ?? '');
+        $motDePasse = $_POST['mot_de_passe'] ?? '';
 
         $dao = new UtilisateurDAO();
 

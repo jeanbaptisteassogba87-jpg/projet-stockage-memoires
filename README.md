@@ -1,60 +1,78 @@
-📚 Système de Gestion des Mémoires — UATM GASA Formation
+# Gestion des mémoires — UATM GASA Formation
 
-Application web permettant le dépôt, la validation, la publication et la consultation des mémoires de soutenance.
+Application PHP et MySQL pour le dépôt, la vérification, la publication et la consultation des mémoires.
 
-## 🛠️ Stack technique
-- **Backend** : PHP 8+
-- **Base de données** : MySQL
-- **Frontend** : Bootstrap 5
-- **Tests** : PHPUnit
+## Parcours
 
-## 🔐 Comptes de test
-Mot de passe unique : uatm1234
+- Les étudiants de L3 et M2 déposent et suivent leurs mémoires.
+- Un professeur vérifie le document et peut le valider ou demander des corrections.
+- Après la soutenance, le directeur enregistre la note finale communiquée par le jury. La mention est calculée à partir de la note.
+- Le directeur gère ensuite la publication. Les visiteurs peuvent consulter les mémoires publiés sans compte.
 
-### Technicien
-- koffi@gmail.com
+Le barème initial est le suivant : moins de 10, Ajourné ; de 10 à moins de 12, Passable ; de 12 à moins de 14, Assez bien ; de 14 à moins de 16, Bien ; de 16 à 20, Très bien. Les seuils sont définis dans `models/MentionJury.php`.
 
-### Directeur des études
-- amivi@gmail.com
+## Installation locale
 
-### Professeurs
-- gildas@gmail.com
-- aissi@gmail.com
-- fifame@gmail.com
+1. Créer le schéma et les données de démonstration :
 
-### Étudiants diplomés (peuvent déposer)
-- jean@gmail.com (L3, Informatique)
-- cossi@gmail.com (M2, Informatique)
-- roland@gmail.com (L3, Réseaux)
-- fructueux@gmail.com (M2, Réseaux)
-- arnaud@gmail.com (L3, Gestion)
+   ```bash
+   mysql -u root -p < sql/database.sql
+   mysql -u root -p gestion_memoires < sql/data_test.sql
+   ```
 
-### Commentateurs (consultation uniquement)
-- esperance@gmail.com (L1, Informatique)
-- mariatou@gmail.com (L2, Réseaux)
-- carine@gmail.com (M1, Gestion)
-- benedicte@gmail.com (L1, Informatique)
-- serge@gmail.com (L2, Réseaux)
+   Les données de démonstration créent quatre comptes et un mémoire fictif avec son PDF. À utiliser sur une base de développement vide.
 
-## 🧪 Lancer les tests
+2. Créer `config/database.local.php` avec les accès MySQL locaux. Ce fichier est ignoré par Git :
+
+   ```php
+   <?php
+   return [
+       'host' => '127.0.0.1',
+       'dbname' => 'gestion_memoires',
+       'username' => 'root',
+       'password' => '',
+       // 'port' => 3306, // facultatif
+   ];
+   ```
+
+3. Lancer le serveur depuis la racine du projet :
+
+   ```bash
+   php -S 127.0.0.1:8000 router.php
+   ```
+
+   Ouvrir <http://127.0.0.1:8000>. L’accueil permet d’explorer la bibliothèque en visiteur.
+
+### Comptes de démonstration
+
+Mot de passe : `password`
+
+| Rôle | Adresse |
+| --- | --- |
+| Technicien | `tech@uatm.bj` |
+| Directeur | `directeur@uatm.bj` |
+| Professeur | `prof@uatm.bj` |
+| Étudiant | `etud@uatm.bj` |
+
+## Base existante
+
+Pour une base créée avec une ancienne version du schéma, appliquer une seule fois la migration :
+
 ```bash
+mysql -u root -p gestion_memoires < sql/ajout_note_jury.sql
+```
+
+Le schéma actuel contient déjà les champs de binôme ; ne pas rejouer `sql/ajout_binome_memoire.sql` dessus.
+
+## Configuration d’hébergement
+
+La connexion accepte `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` et `DB_PASSWORD`. Les secrets restent dans les variables privées de l’hébergeur ou dans le fichier local ignoré par Git.
+
+Le dépôt ne contient pas encore le paquetage de déploiement Vercel. L’application écrit les PDF dans `uploads/memoires/` et utilise les sessions PHP locales ; il faudra connecter un stockage persistant pour les fichiers et les sessions avant de mettre le service en production.
+
+## Tests existants
+
+```bash
+composer install
 ./vendor/bin/phpunit tests/
 ```
-
-## 👀 Explorer le site sans compte
-
-L'accueil ouvre la bibliothèque publique. Les visiteurs peuvent rechercher et consulter les mémoires publiés, y compris leur PDF. Les actions de dépôt, commentaire et like nécessitent un compte connecté.
-
-En local, place les identifiants MySQL de ta machine dans `config/database.local.php`, importe `sql/database.sql`, puis les données de démonstration avec `sql/data_test.sql`. Lance ensuite :
-
-```bash
-php -S 127.0.0.1:8000
-```
-
-Ouvre `http://127.0.0.1:8000` dans ton navigateur.
-
-Les identifiants locaux sont conservés dans `config/database.local.php`, un fichier ignoré par Git. En hébergement, renseigne les variables `DB_HOST`, `DB_NAME`, `DB_USER` et `DB_PASSWORD` dans les paramètres du service.
-
-## 🚀 Déploiement Vercel
-
-Le projet utilise PHP, MySQL et stocke les PDF dans `uploads/memoires/`. Un déploiement Vercel nécessite une base de données accessible depuis Vercel et un stockage persistant des PDF. Le stockage local du conteneur n'est pas durable. Il faut également un stockage de sessions partagé pour préserver les connexions entre instances. Préparer ces services et externaliser le stockage avant d'activer le déploiement continu GitHub.

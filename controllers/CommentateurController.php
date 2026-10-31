@@ -18,6 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+requireCsrfToken();
+
 // Doit être connecté (tous les rôles peuvent commenter)
 requireAuth();
 
@@ -109,8 +111,7 @@ if ($action === 'toggler_like') {
     }
 
     // Retour vers la page du mémoire
-    $retour = $_POST['retour'] ?? '/views/commentateur/consulter_memoire.php?id=' . $memoireId;
-    header('Location: ' . $retour);
+    header('Location: /views/commentateur/consulter_memoire.php?id=' . $memoireId);
     exit;
 }
 

@@ -30,6 +30,7 @@ $centres = $centreDAO->listerTous();
   <h2>Modifier l'utilisateur #<?= (int) $user['id_utilisateur'] ?></h2>
 
   <form method="POST" action="/controllers/TechnicienController.php" class="mt-3">
+    <?= csrfField() ?>
     <input type="hidden" name="action" value="modifier_utilisateur">
     <input type="hidden" name="id_utilisateur" value="<?= (int) $user['id_utilisateur'] ?>">
 
@@ -86,6 +87,7 @@ $centres = $centreDAO->listerTous();
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <form method="POST" action="/controllers/TechnicienController.php" id="confirmActionForm">
+        <?= csrfField() ?>
         <div class="modal-header">
           <h5 class="modal-title" id="confirmActionTitle">Confirmer l'action</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>

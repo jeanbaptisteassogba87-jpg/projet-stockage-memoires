@@ -106,11 +106,15 @@ class MemoirePublicDAO
     {
         $sql = "
             SELECT
-                m.*,
+                m.id_memoire,
+                m.etudiant_id,
+                m.etudiant2_id,
+                m.titre,
+                m.theme,
+                m.type_diplome,
+                m.annee_soutenance,
+                m.statut,
                 u.nom           AS nom_etudiant,
-                u.email         AS email_etudiant,
-                e.niveau_etude,
-                e.numero_etudiant,
                 f.nom_filiere,
                 c.nom_centre,
                 prof.nom        AS nom_professeur,

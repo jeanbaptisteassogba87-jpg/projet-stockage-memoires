@@ -51,6 +51,9 @@ $aPublier       = array_slice($aPublier, 0, 5); // 5 derniers seulement sur le d
             <span class="badge bg-warning text-dark ms-1"><?= count($aPublier) ?></span>
           <?php endif; ?>
         </a>
+        <a class="nav-link" href="/views/directeur/resultats_jury.php">
+          <i class="bi bi-award"></i> Résultats du jury
+        </a>
         <a class="nav-link" href="/views/commentateur/rechercher.php">
           <i class="bi bi-search"></i> Consulter mémoires
         </a>
@@ -189,6 +192,7 @@ $aPublier       = array_slice($aPublier, 0, 5); // 5 derniers seulement sur le d
                     <td>
                       <form method="POST" action="/controllers/DirecteurController.php"
                             style="display:inline">
+                        <?= csrfField() ?>
                         <input type="hidden" name="action"     value="publier">
                         <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                         <button type="submit" class="btn btn-sm btn-uatm"

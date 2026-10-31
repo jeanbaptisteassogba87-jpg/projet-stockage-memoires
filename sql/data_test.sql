@@ -16,8 +16,7 @@ INSERT INTO filiere (nom_filiere, centre_id) VALUES
 ('Informatique', 2),
 ('Gestion',      2);
 
--- Utilisateurs (mdp = "password123" hashé bcrypt)
--- hash généré par : password_hash('password123', PASSWORD_BCRYPT)
+-- Utilisateurs de démonstration (mot de passe : "password", hashé avec bcrypt)
 INSERT INTO utilisateur (nom, email, mot_de_passe, centre_id, role, doit_changer_mdp) VALUES
 ('Kofi Technicien', 'tech@uatm.bj',      '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1, 'technicien', FALSE),
 ('Amivi Directeur', 'directeur@uatm.bj', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 1, 'directeur',  FALSE),
@@ -35,3 +34,19 @@ INSERT INTO professeur (utilisateur_id, specialite, grade) VALUES (3, 'Développ
 
 -- Étudiant L3
 INSERT INTO etudiant (utilisateur_id, numero_etudiant, niveau_etude, filiere_id) VALUES (4, 'ETU2024001', 'L3', 1);
+
+-- Mémoire fictif publié pour vérifier le parcours visiteur en local.
+INSERT INTO memoire (
+    etudiant_id, titre, theme, fichier_pdf, statut, type_diplome,
+    annee_soutenance, professeur_id, note_jury
+) VALUES (
+    4,
+    'Gestion numérique des archives universitaires',
+    'Étude fictive sur la conservation et la consultation des documents pédagogiques.',
+    'demo_memoire.pdf',
+    'publie',
+    'licence',
+    2024,
+    3,
+    15.50
+);

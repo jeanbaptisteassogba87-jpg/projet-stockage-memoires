@@ -64,6 +64,9 @@ $labelStatut = [
         <a class="nav-link active" href="/views/directeur/gerer_visibilite.php">
           <i class="bi bi-eye"></i> Gérer la visibilité
         </a>
+        <a class="nav-link" href="/views/directeur/resultats_jury.php">
+          <i class="bi bi-award"></i> Résultats du jury
+        </a>
         <a class="nav-link" href="/views/commentateur/rechercher.php">
           <i class="bi bi-search"></i> Consulter mémoires
         </a>
@@ -184,6 +187,7 @@ $labelStatut = [
                           <!-- Dépublier -->
                           <form method="POST" action="/controllers/DirecteurController.php"
                                 style="display:inline">
+                            <?= csrfField() ?>
                             <input type="hidden" name="action"     value="depublier">
                             <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                             <button type="submit"
@@ -197,6 +201,7 @@ $labelStatut = [
                           <!-- Publier -->
                           <form method="POST" action="/controllers/DirecteurController.php"
                                 style="display:inline">
+                            <?= csrfField() ?>
                             <input type="hidden" name="action"     value="publier">
                             <input type="hidden" name="id_memoire" value="<?= $m['id_memoire'] ?>">
                             <button type="submit"

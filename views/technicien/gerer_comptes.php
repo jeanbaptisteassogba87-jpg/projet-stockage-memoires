@@ -123,6 +123,7 @@ $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']] ?? '') 
         </div>
         <div class="card-body p-4">
           <form method="POST" action="/controllers/TechnicienController.php">
+            <?= csrfField() ?>
             <input type="hidden" name="action" value="creer_utilisateur">
 
             <div class="row g-3">
@@ -342,6 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="modal-dialog modal-sm modal-dialog-centered">
     <div class="modal-content">
       <form method="POST" action="/controllers/TechnicienController.php" id="confirmActionForm">
+        <?= csrfField() ?>
         <div class="modal-header">
           <h5 class="modal-title" id="confirmActionTitle">Confirmer l'action</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>

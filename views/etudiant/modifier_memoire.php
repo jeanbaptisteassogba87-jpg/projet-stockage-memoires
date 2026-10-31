@@ -177,6 +177,7 @@ $erreur  = !empty($_GET['error'])   ? ($messages[$_GET['error']] ?? 'Erreur.') :
                     enctype="multipart/form-data"
                     id="form-modification"
                     novalidate>
+                <?= csrfField() ?>
 
                 <input type="hidden" name="action"     value="modifier_memoire">
                 <input type="hidden" name="id_memoire" value="<?= $memoireSelectionne['id_memoire'] ?>">

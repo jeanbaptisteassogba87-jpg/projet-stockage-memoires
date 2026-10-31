@@ -44,6 +44,7 @@ if (!empty($_SESSION['user_id'])) {
     <?php endif; ?>
 
     <form method="POST" action="../../controllers/AuthController.php">
+      <?= csrfField() ?>
       <input type="hidden" name="action" value="login">
 
       <div class="mb-3">

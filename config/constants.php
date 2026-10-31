@@ -23,5 +23,9 @@ define('NIVEAUX_DEPOT', ['L3', 'M2']);
 // Taille max PDF (10 Mo)
 define('MAX_PDF_SIZE', 10 * 1024 * 1024);
 
-// Chemin stockage PDF (HORS webroot)
+// Barème de soutenance sur 20. La mention est toujours calculée depuis la note.
+define('NOTE_MINIMALE', 0.0);
+define('NOTE_MAXIMALE', 20.0);
+
+// Répertoire de stockage PDF, protégé contre l'accès HTTP direct.
 define('PDF_STORAGE_PATH', __DIR__ . '/../uploads/memoires/');

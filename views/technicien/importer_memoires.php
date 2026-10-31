@@ -102,6 +102,7 @@ if (!empty($_GET['error'])) {
                 action="/controllers/TechnicienController.php"
                 enctype="multipart/form-data"
                 id="form-import">
+            <?= csrfField() ?>
 
             <input type="hidden" name="action" value="importer_memoires">
 
