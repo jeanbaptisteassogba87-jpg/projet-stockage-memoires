@@ -45,13 +45,15 @@ Mot de passe unique : uatm1234
 
 L'accueil ouvre la bibliothèque publique. Les visiteurs peuvent rechercher et consulter les mémoires publiés, y compris leur PDF. Les actions de dépôt, commentaire et like nécessitent un compte connecté.
 
-En local, configure `config/database.php` avec les identifiants MySQL de ta machine, importe `sql/database.sql`, puis les données de démonstration avec `sql/data_test.sql`. Lance ensuite :
+En local, place les identifiants MySQL de ta machine dans `config/database.local.php`, importe `sql/database.sql`, puis les données de démonstration avec `sql/data_test.sql`. Lance ensuite :
 
 ```bash
 php -S 127.0.0.1:8000
 ```
 
 Ouvre `http://127.0.0.1:8000` dans ton navigateur.
+
+Les identifiants locaux sont conservés dans `config/database.local.php`, un fichier ignoré par Git. En hébergement, renseigne les variables `DB_HOST`, `DB_NAME`, `DB_USER` et `DB_PASSWORD` dans les paramètres du service.
 
 ## 🚀 Déploiement Vercel
 
