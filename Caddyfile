@@ -1,0 +1,8 @@
+:{$PORT:80} {
+	root * /app
+
+	@private path /config /config/* /sql /sql/* /models /models/* /dao /dao/* /tests /tests/* /vendor /vendor/* /uploads /uploads/* /.git /.* /README.md /composer.json /composer.lock /package.json /package-lock.json /phpunit.xml /router.php /Caddyfile /Dockerfile.vercel
+	respond @private 404
+
+	php_server
+}

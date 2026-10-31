@@ -1,0 +1,11 @@
+.git
+.aws
+.agents
+.codex
+.phpunit.result.cache
+vendor
+tests
+sql
+config/database.local.php
+uploads/memoires/*
+!uploads/memoires/demo_memoire.pdf

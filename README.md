@@ -66,11 +66,22 @@ mysql -u root -p gestion_memoires < sql/ajout_note_jury.sql
 
 Le schéma actuel contient déjà les champs de binôme ; ne pas rejouer `sql/ajout_binome_memoire.sql` dessus.
 
+## Essai de déploiement sur Vercel
+
+Le dépôt contient un conteneur PHP/FrankenPHP pour Vercel (`Dockerfile.vercel` et `Caddyfile`). Pour lancer un essai :
+
+1. Créer une base MySQL hébergée vide. La base locale n'est pas accessible depuis Internet.
+2. Y importer `sql/database.sql`, puis `sql/data_test.sql`. Ces données sont fictives et les comptes de test utilisent le mot de passe `password`.
+3. Importer le dépôt GitHub dans Vercel. Vercel doit utiliser le runtime **Container**.
+4. Dans les variables d'environnement Vercel, définir `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` et `DB_PASSWORD` avec les accès à cette base de test, puis redéployer.
+
+Le contexte Docker exclut `config/database.local.php` et les PDF personnels du dépôt ; seul le PDF fictif est inclus. Cet essai sert à consulter le site. Vercel ne conserve pas les fichiers écrits dans le conteneur et les sessions PHP locales ne sont pas partagées entre instances : ne pas y déposer de vrais mémoires et ne pas compter sur les connexions pour rester actives. Il faudra connecter un stockage de fichiers et un stockage de sessions avant un usage régulier.
+
 ## Configuration d’hébergement
 
 La connexion accepte `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` et `DB_PASSWORD`. Les secrets restent dans les variables privées de l’hébergeur ou dans le fichier local ignoré par Git.
 
-Le dépôt ne contient pas encore le paquetage de déploiement Vercel. L’application écrit les PDF dans `uploads/memoires/` et utilise les sessions PHP locales ; il faudra connecter un stockage persistant pour les fichiers et les sessions avant de mettre le service en production.
+L’application écrit les PDF dans `uploads/memoires/` et utilise les sessions PHP locales. Pour une utilisation durable, il faut connecter un stockage persistant pour les fichiers et les sessions.
 
 ## Tests existants
 
