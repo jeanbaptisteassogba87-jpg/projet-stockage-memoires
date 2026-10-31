@@ -39,16 +39,20 @@ Mot de passe unique : uatm1234
 ## 🧪 Lancer les tests
 ```bash
 ./vendor/bin/phpunit tests/
+```
 
-🌿 Branches Git
-Moubarack/Authentification : Authentification
+## 👀 Explorer le site sans compte
 
-uploader-memoire : Dépôt mémoire
+L'accueil ouvre la bibliothèque publique. Les visiteurs peuvent rechercher et consulter les mémoires publiés, y compris leur PDF. Les actions de dépôt, commentaire et like nécessitent un compte connecté.
 
-membre3/consultation : Consultation
+En local, configure `config/database.php` avec les identifiants MySQL de ta machine, importe `sql/database.sql`, puis les données de démonstration avec `sql/data_test.sql`. Lance ensuite :
 
-steven-branch : Vérification professeur
+```bash
+php -S 127.0.0.1:8000
+```
 
-feature-binome-comptes-responsive : Directeur études
+Ouvre `http://127.0.0.1:8000` dans ton navigateur.
 
-main : Intégration' 
+## 🚀 Déploiement Vercel
+
+Le projet utilise PHP, MySQL et stocke les PDF dans `uploads/memoires/`. Un déploiement Vercel nécessite une base de données accessible depuis Vercel et un stockage persistant des PDF. Le stockage local du conteneur n'est pas durable. Il faut également un stockage de sessions partagé pour préserver les connexions entre instances. Préparer ces services et externaliser le stockage avant d'activer le déploiement continu GitHub.

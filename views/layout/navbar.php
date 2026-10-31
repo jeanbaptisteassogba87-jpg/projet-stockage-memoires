@@ -12,16 +12,22 @@
         <li class="nav-item">
           <span class="nav-link text-white-50">
             <i class="bi bi-person-circle me-1"></i>
-            <?= htmlspecialchars($_SESSION['user_nom'] ?? '') ?>
+            <?= htmlspecialchars($_SESSION['user_nom'] ?? 'Visiteur') ?>
             <span class="badge bg-warning text-dark ms-1">
-              <?= htmlspecialchars($_SESSION['user_role'] ?? '') ?>
+              <?= htmlspecialchars($_SESSION['user_role'] ?? 'lecture seule') ?>
             </span>
           </span>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/logout.php">
-            <i class="bi bi-box-arrow-right"></i> Déconnexion
-          </a>
+          <?php if (!empty($_SESSION['user_id'])): ?>
+            <a class="nav-link" href="/logout.php">
+              <i class="bi bi-box-arrow-right"></i> Déconnexion
+            </a>
+          <?php else: ?>
+            <a class="nav-link" href="/views/auth/login.php">
+              <i class="bi bi-box-arrow-in-right"></i> Connexion
+            </a>
+          <?php endif; ?>
         </li>
       </ul>
     </div>

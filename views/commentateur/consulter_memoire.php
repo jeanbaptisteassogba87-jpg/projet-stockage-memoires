@@ -14,8 +14,6 @@ require_once __DIR__ . '/../../dao/MemoirePublicDAO.php';
 require_once __DIR__ . '/../../dao/CommentaireDAO.php';
 require_once __DIR__ . '/../../dao/LikeDAO.php';
 
-requireAuth();
-
 $id = (int) ($_GET['id'] ?? 0);
 if (!$id) {
     header('Location: /views/commentateur/rechercher.php');
@@ -25,7 +23,7 @@ if (!$id) {
 $dao          = new MemoirePublicDAO();
 $commentaireDAO = new CommentaireDAO();
 $likeDAO      = new LikeDAO();
-$userId       = (int) $_SESSION['user_id'];
+$userId       = (int) ($_SESSION['user_id'] ?? 0);
 
 // Charger le mémoire — uniquement s'il est publié
 $memoire = $dao->trouverPublie($id);
@@ -36,7 +34,7 @@ if (!$memoire) {
 
 // Charger les commentaires et l'état du like
 $commentaires = $commentaireDAO->listerParMemoire($id);
-$aLike        = $likeDAO->aDejaLike($id, $userId);
+$aLike        = $userId > 0 && $likeDAO->aDejaLike($id, $userId);
 
 // Messages feedback
 $successMessages = [
@@ -50,7 +48,7 @@ $errorMessages = [
 $successMsg = !empty($_GET['success']) ? ($successMessages[$_GET['success']] ?? '') : '';
 $errorMsg   = !empty($_GET['error'])   ? ($errorMessages[$_GET['error']]   ?? '') : '';
 
-$role = $_SESSION['user_role'];
+$role = $_SESSION['user_role'] ?? null;
 
 // Déterminer si l'utilisateur est l'auteur ou le binôme
 $estAuteur  = (isset($memoire['id_etudiant']) && (int) $memoire['id_etudiant'] === $userId);
@@ -191,6 +189,7 @@ $estProprio = $estAuteur || $estBinome;
                 </div>
 
                 <!-- Bouton like -->
+                <?php if ($userId > 0): ?>
                 <form method="POST" action="/controllers/CommentateurController.php"
                       style="margin:0">
                   <input type="hidden" name="action"     value="toggler_like">
@@ -204,6 +203,11 @@ $estProprio = $estAuteur || $estBinome;
                     <?= $aLike ? 'Je n\'aime plus' : 'J\'aime' ?>
                   </button>
                 </form>
+                <?php else: ?>
+                  <a class="btn btn-sm btn-outline-danger" href="/views/auth/login.php">
+                    Connectez-vous pour aimer ce mémoire
+                  </a>
+                <?php endif; ?>
               </div>
 
             </div>
@@ -218,6 +222,7 @@ $estProprio = $estAuteur || $estBinome;
             <div class="card-body">
 
               <!-- Formulaire d'ajout -->
+              <?php if ($userId > 0): ?>
               <form method="POST" action="/controllers/CommentateurController.php"
                     class="mb-4">
                 <input type="hidden" name="action"     value="ajouter_commentaire">
@@ -240,6 +245,11 @@ $estProprio = $estAuteur || $estBinome;
                   </button>
                 </div>
               </form>
+              <?php else: ?>
+                <p class="alert alert-light border mb-4">
+                  <a href="/views/auth/login.php">Connectez-vous</a> pour publier un commentaire.
+                </p>
+              <?php endif; ?>
 
               <!-- Liste des commentaires -->
               <?php if (empty($commentaires)): ?>

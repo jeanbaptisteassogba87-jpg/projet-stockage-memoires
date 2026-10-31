@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../config/constants.php';
 require_once __DIR__ . '/../../dao/MemoirePublicDAO.php';
 require_once __DIR__ . '/../../dao/LikeDAO.php';
 
-requireAuth();
+// La bibliothèque des mémoires publiés est consultable sans compte.
 
 $dao     = new MemoirePublicDAO();
 $likeDAO = new LikeDAO();
@@ -31,13 +31,14 @@ $filieres   = $dao->getFilieresDisponibles();
 
 // Récupérer les likes de l'utilisateur connecté pour ces mémoires
 $memoireIds = array_column($memoires, 'id_memoire');
-$mesLikes   = $likeDAO->getLikesUtilisateur((int) $_SESSION['user_id'], $memoireIds);
+$userId     = (int) ($_SESSION['user_id'] ?? 0);
+$mesLikes   = $userId > 0 ? $likeDAO->getLikesUtilisateur($userId, $memoireIds) : [];
 $mesLikes   = array_flip($mesLikes); // transformer en tableau associatif pour lookup rapide
 
 $aRecherche = ($motsCles || $type || $annee || $filiere);
 
 // Sidebar selon le rôle
-$role = $_SESSION['user_role'];
+$role = $_SESSION['user_role'] ?? null;
 ?>
 <?php require_once __DIR__ . '/../layout/header.php'; ?>
 <?php require_once __DIR__ . '/../layout/navbar.php'; ?>
@@ -87,6 +88,12 @@ $role = $_SESSION['user_role'];
     <div class="col-md-10 p-4">
 
       <h2 class="section-title">Bibliothèque des mémoires</h2>
+      <?php if (empty($_SESSION['user_id'])): ?>
+        <div class="alert alert-info" role="status">
+          Vous explorez la bibliothèque en mode visiteur. Seuls les mémoires publiés sont visibles.
+          Pour déposer, commenter ou aimer un mémoire, <a href="/views/auth/login.php">connectez-vous</a>.
+        </div>
+      <?php endif; ?>
 
       <!-- Formulaire de recherche -->
       <div class="card mb-4">

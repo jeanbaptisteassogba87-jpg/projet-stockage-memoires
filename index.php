@@ -3,7 +3,7 @@ require_once 'config/session.php';
 require_once 'config/constants.php';
 
 if (empty($_SESSION['user_id'])) {
-    header('Location: /views/auth/login.php');
+    header('Location: /views/commentateur/rechercher.php');
     exit;
 }
 

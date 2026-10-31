@@ -5,8 +5,6 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../dao/MemoireDAO.php';
 
-requireAuth();
-
 $id = (int) ($_GET['id'] ?? 0);
 if (!$id) {
     http_response_code(400);
@@ -22,8 +20,8 @@ if (!$memoire) {
 }
 
 // ── Contrôle d'accès par rôle ────────────────────────────────
-$role     = $_SESSION['user_role'];
-$userId   = (int) $_SESSION['user_id'];
+$role     = $_SESSION['user_role'] ?? null;
+$userId   = (int) ($_SESSION['user_id'] ?? 0);
 $autorise = false;
 
 switch ($role) {

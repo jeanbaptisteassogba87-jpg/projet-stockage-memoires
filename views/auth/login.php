@@ -77,6 +77,9 @@ if (!empty($_SESSION['user_id'])) {
     <p class="text-center mt-3" style="font-size:0.8rem;color:var(--text-muted)">
       Compte créé uniquement par l'administration
     </p>
+    <div class="text-center">
+      <a href="/views/commentateur/rechercher.php">Continuer en visiteur</a>
+    </div>
   </div>
 </div>
 
