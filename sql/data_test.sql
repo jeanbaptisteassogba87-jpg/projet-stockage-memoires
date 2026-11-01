@@ -38,7 +38,7 @@ INSERT INTO etudiant (utilisateur_id, numero_etudiant, niveau_etude, filiere_id)
 -- Mémoire fictif publié pour vérifier le parcours visiteur en local.
 INSERT INTO memoire (
     etudiant_id, titre, theme, fichier_pdf, statut, type_diplome,
-    annee_soutenance, professeur_id, note_jury
+    annee_soutenance, professeur_id
 ) VALUES (
     4,
     'Gestion numérique des archives universitaires',
@@ -47,6 +47,5 @@ INSERT INTO memoire (
     'publie',
     'licence',
     2024,
-    3,
-    15.50
+    3
 );

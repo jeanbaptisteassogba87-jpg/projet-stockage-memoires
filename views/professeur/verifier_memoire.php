@@ -278,21 +278,16 @@ $peutAgir = ($memoire['statut'] === STATUT_EN_VERIFICATION
               <i class="bi bi-file-earmark-pdf me-2"></i>Mémoire PDF
             </div>
             <div class="card-body p-2">
-              <div id="pdf-container">
-                <iframe
-                  src="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                  width="100%"
-                  height="700px"
-                  style="border:none;border-radius:var(--radius)">
-                  <p style="color:#fff;padding:20px">
-                    Votre navigateur ne supporte pas l'affichage de PDF.
-                    <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                       style="color:var(--secondary)">
-                      Télécharger le fichier
-                    </a>
-                  </p>
-                </iframe>
+              <div data-protected-pdf data-memoire-id="<?= (int) $memoire['id_memoire'] ?>">
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                  <button type="button" class="btn btn-sm btn-secondary" data-pdf-previous>◀ Précédent</button>
+                  <span data-pdf-status>Chargement du document…</span>
+                  <button type="button" class="btn btn-sm btn-secondary" data-pdf-next>Suivant ▶</button>
+                </div>
+                <img data-pdf-page alt="Page du mémoire" class="img-fluid d-block mx-auto"
+                     style="max-height:75vh;border:1px solid #ccc;border-radius:8px">
               </div>
+              <script src="/public/js/protected_pdf_viewer.js"></script>
             </div>
           </div>
         </div>

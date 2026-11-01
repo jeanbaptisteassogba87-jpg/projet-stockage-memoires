@@ -140,29 +140,18 @@ $labelStatut = [
                 <i class="bi bi-file-earmark-pdf me-2"></i>
                 <?= htmlspecialchars(mb_substr($memoire['titre'], 0, 50)) ?>
               </span>
-              <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                 target="_blank"
-                 class="btn btn-sm"
-                 style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:0.8rem">
-                <i class="bi bi-box-arrow-up-right me-1"></i> Ouvrir
-              </a>
             </div>
             <div class="card-body p-2">
-              <div id="pdf-container">
-                <iframe
-                  src="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                  width="100%"
-                  height="750px"
-                  style="border:none;border-radius:var(--radius)">
-                  <p style="color:#fff;padding:20px">
-                    Votre navigateur ne supporte pas l'affichage intégré.
-                    <a href="/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>"
-                       style="color:var(--secondary)">
-                      Télécharger le mémoire
-                    </a>
-                  </p>
-                </iframe>
+              <div data-protected-pdf data-memoire-id="<?= (int) $memoire['id_memoire'] ?>">
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                  <button type="button" class="btn btn-sm btn-secondary" data-pdf-previous>◀ Précédent</button>
+                  <span data-pdf-status>Chargement du document…</span>
+                  <button type="button" class="btn btn-sm btn-secondary" data-pdf-next>Suivant ▶</button>
+                </div>
+                <img data-pdf-page alt="Page du mémoire" class="img-fluid d-block mx-auto"
+                     style="max-height:75vh;border:1px solid #ccc;border-radius:8px">
               </div>
+              <script src="/public/js/protected_pdf_viewer.js"></script>
             </div>
           </div>
         </div>

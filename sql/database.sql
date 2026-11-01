@@ -81,7 +81,6 @@ CREATE TABLE memoire (
     annee_soutenance YEAR NOT NULL,
     date_depot      DATETIME DEFAULT CURRENT_TIMESTAMP,
     remarques       TEXT,
-    note_jury       DECIMAL(4,2) NULL,
     professeur_id   INT,                     -- assigné lors de la vérification
     etudiant2_id     INT NULL,                -- binôme optionnel, co-auteur
     FOREIGN KEY (etudiant_id)   REFERENCES etudiant(utilisateur_id),

@@ -51,9 +51,6 @@ $aPublier       = array_slice($aPublier, 0, 5); // 5 derniers seulement sur le d
             <span class="badge bg-warning text-dark ms-1"><?= count($aPublier) ?></span>
           <?php endif; ?>
         </a>
-        <a class="nav-link" href="/views/directeur/resultats_jury.php">
-          <i class="bi bi-award"></i> Résultats du jury
-        </a>
         <a class="nav-link" href="/views/commentateur/rechercher.php">
           <i class="bi bi-search"></i> Consulter mémoires
         </a>

@@ -9,7 +9,6 @@ $pageTitle = 'Mon espace — Étudiant';
 require_once __DIR__ . '/../../config/session.php';
 require_once __DIR__ . '/../../config/constants.php';
 require_once __DIR__ . '/../../dao/MemoireDAO.php';
-require_once __DIR__ . '/../../models/MentionJury.php';
 
 requireRole(ROLE_ETUDIANT);
 
@@ -187,7 +186,6 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                   <th>Année</th>
                   <th>Date dépôt</th>
                   <th>Statut</th>
-                  <th>Résultat du jury</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -228,16 +226,6 @@ $errorMsg = !empty($_GET['error']) ? ($errorMessages[$_GET['error']] ?? '') : ''
                       </span>
                       <?php if ($estBinome): ?>
                         <span class="badge bg-secondary ms-1">Binôme</span>
-                      <?php endif; ?>
-                    </td>
-                    <td>
-                      <?php if (array_key_exists('note_jury', $m) && $m['note_jury'] !== null): ?>
-                        <?= number_format((float) $m['note_jury'], 2, ',', ' ') ?>/20<br>
-                        <span class="small text-muted">
-                          <?= htmlspecialchars(MentionJury::calculer((float) $m['note_jury'])) ?>
-                        </span>
-                      <?php else: ?>
-                        <span class="text-muted">À venir</span>
                       <?php endif; ?>
                     </td>
                     <td>

@@ -6,10 +6,11 @@ Application PHP et MySQL pour le dépôt, la vérification, la publication et la
 
 - Les étudiants de L3 et M2 déposent et suivent leurs mémoires.
 - Un professeur vérifie le document et peut le valider ou demander des corrections.
-- Après la soutenance, le directeur enregistre la note finale communiquée par le jury. La mention est calculée à partir de la note.
 - Le directeur gère ensuite la publication. Les visiteurs peuvent consulter les mémoires publiés sans compte.
+- Les mémoires publiés se recherchent par filière, centre et année. Le fichier original est téléchargeable uniquement par l’auteur et son binôme ; les autres utilisateurs le consultent dans le lecteur intégré.
 
-Le barème initial est le suivant : moins de 10, Ajourné ; de 10 à moins de 12, Passable ; de 12 à moins de 14, Assez bien ; de 14 à moins de 16, Bien ; de 16 à 20, Très bien. Les seuils sont définis dans `models/MentionJury.php`.
+Le lecteur protège le PDF original en envoyant les pages rendues en images aux autres utilisateurs. Il nécessite `pdfinfo` et `pdftoppm` (paquet `poppler-utils`), installés dans le conteneur Vercel ; ils doivent aussi être présents sur un hébergement local.
+
 
 ## Installation locale
 
@@ -57,12 +58,6 @@ Mot de passe : `password`
 | Étudiant | `etud@uatm.bj` |
 
 ## Base existante
-
-Pour une base créée avec une ancienne version du schéma, appliquer une seule fois la migration :
-
-```bash
-mysql -u root -p gestion_memoires < sql/ajout_note_jury.sql
-```
 
 Le schéma actuel contient déjà les champs de binôme ; ne pas rejouer `sql/ajout_binome_memoire.sql` dessus.
 

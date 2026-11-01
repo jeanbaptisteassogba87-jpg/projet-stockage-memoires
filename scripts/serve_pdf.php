@@ -22,7 +22,17 @@ if (!$memoire) {
 // ── Contrôle d'accès par rôle ────────────────────────────────
 $role     = $_SESSION['user_role'] ?? null;
 $userId   = (int) ($_SESSION['user_id'] ?? 0);
+$telecharger = ($_GET['action'] ?? '') === 'telecharger';
+$estAuteur = (int) $memoire['etudiant_id'] === $userId
+    || (int) ($memoire['etudiant2_id'] ?? 0) === $userId;
+$estProprietaireAction = $role === ROLE_ETUDIANT && $estAuteur;
 $autorise = false;
+
+// Le PDF original ne peut être servi qu'à l'auteur ou au binôme.
+if ($telecharger && !$estProprietaireAction) {
+    http_response_code(403);
+    exit('Téléchargement réservé à l’auteur du mémoire.');
+}
 
 switch ($role) {
     case ROLE_ETUDIANT:
@@ -63,11 +73,18 @@ if (!file_exists($cheminFichier) || !is_readable($cheminFichier)) {
     exit('Fichier introuvable sur le serveur.');
 }
 
-// ── Headers sécurisés anti-téléchargement ───────────────────
+// Seul l'auteur récupère le fichier PDF original. Les autres rôles utilisent
+// serve_pdf_page.php, qui ne transmet que des images des pages.
+if (!$estAuteur) {
+    http_response_code(403);
+    exit('Le fichier original est réservé à l’auteur du mémoire.');
+}
+
+// ── Envoi du fichier original à l'auteur ─────────────────────
 header('Content-Type: application/pdf');
-// inline + nom générique = pas d'invitation à sauvegarder
-header('Content-Disposition: inline; filename="document.pdf"');
-// no-store = jamais écrit sur disque par le navigateur
+header($telecharger
+    ? 'Content-Disposition: attachment; filename="memoire.pdf"'
+    : 'Content-Disposition: inline; filename="memoire.pdf"');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');

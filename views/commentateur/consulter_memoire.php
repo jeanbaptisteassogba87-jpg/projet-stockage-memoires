@@ -351,87 +351,16 @@ $estProprio = $estAuteur || $estBinome;
                   <p>Votre navigateur ne supporte pas l'affichage intégré.</p>
                 </iframe>
               <?php else: ?>
-                <!-- Visionneuse PDF.js sans téléchargement ni impression -->
-                <div style="text-align:center; margin-bottom:10px;">
-                  <button id="prev-page" class="btn btn-sm btn-secondary">◀ Précédent</button>
-                  <span id="page-info" class="mx-2">Page 1 / ?</span>
-                  <button id="next-page" class="btn btn-sm btn-secondary">Suivant ▶</button>
+                <div data-protected-pdf data-memoire-id="<?= (int) $memoire['id_memoire'] ?>">
+                  <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                    <button type="button" class="btn btn-sm btn-secondary" data-pdf-previous>◀ Précédent</button>
+                    <span data-pdf-status>Chargement du document…</span>
+                    <button type="button" class="btn btn-sm btn-secondary" data-pdf-next>Suivant ▶</button>
+                  </div>
+                  <img data-pdf-page alt="Page du mémoire" class="img-fluid d-block mx-auto"
+                       style="max-height:75vh;border:1px solid #ccc;border-radius:8px">
                 </div>
-                <canvas id="pdf-canvas" style="width:100%; border:1px solid #ccc; border-radius:8px;"></canvas>
-
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-                <script>
-                  (function() {
-                    const url = "/scripts/serve_pdf.php?id=<?= $memoire['id_memoire'] ?>";
-                    let pdfDoc = null;
-                    let pageNum = 1;
-                    let pageRendering = false;
-                    let pageNumPending = null;
-                    const canvas = document.getElementById('pdf-canvas');
-                    const ctx = canvas.getContext('2d');
-
-                    pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
-                      pdfDoc = pdfDoc_;
-                      document.getElementById('page-info').textContent = `Page 1 / ${pdfDoc.numPages}`;
-                      renderPage(1);
-                    }).catch(function(err) {
-                      console.error("Erreur chargement PDF:", err);
-                      document.getElementById('pdf-canvas').outerHTML = '<div class="alert alert-danger">Impossible de charger le PDF.</div>';
-                    });
-
-                    function renderPage(num) {
-                      pageRendering = true;
-                      pdfDoc.getPage(num).then(function(page) {
-                        const viewport = page.getViewport({ scale: 1.5 });
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-                        const renderContext = { canvasContext: ctx, viewport: viewport };
-                        page.render(renderContext).promise.then(function() {
-                          pageRendering = false;
-                          if (pageNumPending !== null) {
-                            renderPage(pageNumPending);
-                            pageNumPending = null;
-                          }
-                        });
-                      });
-                      document.getElementById('page-info').textContent = `Page ${num} / ${pdfDoc.numPages}`;
-                    }
-
-                    document.getElementById('prev-page').addEventListener('click', function() {
-                      if (pageNum <= 1) return;
-                      pageNum--;
-                      renderPage(pageNum);
-                    });
-
-                    document.getElementById('next-page').addEventListener('click', function() {
-                      if (pageNum >= pdfDoc.numPages) return;
-                      pageNum++;
-                      renderPage(pageNum);
-                    });
-
-                    // Bloquer le clic droit sur le canvas
-                    canvas.addEventListener('contextmenu', function(e) {
-                      e.preventDefault();
-                      return false;
-                    });
-
-                    // Bloquer les raccourcis clavier (Ctrl+S, Ctrl+P, etc.)
-                    document.addEventListener('keydown', function(e) {
-                      if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'S' || e.key === 'P' || e.key === 'U')) {
-                        e.preventDefault();
-                        return false;
-                      }
-                      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
-                        e.preventDefault();
-                        return false;
-                      }
-                      if (e.key === 'F12') {
-                        e.preventDefault();
-                        return false;
-                      }
-                    });
-                  })();
-                </script>
+                <script src="/public/js/protected_pdf_viewer.js"></script>
               <?php endif; ?>
             </div>
           </div>

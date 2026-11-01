@@ -64,9 +64,6 @@ $labelStatut = [
         <a class="nav-link active" href="/views/directeur/gerer_visibilite.php">
           <i class="bi bi-eye"></i> Gérer la visibilité
         </a>
-        <a class="nav-link" href="/views/directeur/resultats_jury.php">
-          <i class="bi bi-award"></i> Résultats du jury
-        </a>
         <a class="nav-link" href="/views/commentateur/rechercher.php">
           <i class="bi bi-search"></i> Consulter mémoires
         </a>
